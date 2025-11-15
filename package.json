@@ -1,0 +1,61 @@
+{
+  "name": "dry-types",
+  "version": "0.1.0",
+  "description": "Reusable utility functions for type conversions and checks",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.esm.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "prepublishOnly": "npm run build",
+    "publish": "node scripts/publish.js"
+  },
+  "keywords": [
+    "types",
+    "type-checking",
+    "type-conversion",
+    "utilities",
+    "utils"
+  ],
+  "author": "Jason Byrne",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasonbyrne/dry-types.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jasonbyrne/dry-types/issues"
+  },
+  "homepage": "https://github.com/jasonbyrne/dry-types#readme",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.6",
+    "jest": "^29.7.0",
+    "rollup": "^4.9.0",
+    "ts-jest": "^29.1.1",
+    "tslib": "^2.8.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
