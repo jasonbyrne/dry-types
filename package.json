@@ -1,6 +1,6 @@
 {
-  "name": "dry-types",
-  "version": "0.1.0",
+  "name": "@jasonbyrne/dry-types",
+  "version": "0.2.1",
   "description": "Reusable utility functions for type conversions and checks",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -26,7 +26,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "prepublishOnly": "npm run build",
-    "publish": "node scripts/publish.js"
+    "release": "node scripts/publish.js"
   },
   "keywords": [
     "types",
@@ -39,7 +39,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jasonbyrne/dry-types.git"
+    "url": "git+https://github.com/jasonbyrne/dry-types.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "bugs": {
     "url": "https://github.com/jasonbyrne/dry-types/issues"

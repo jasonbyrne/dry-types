@@ -5,13 +5,13 @@ Reusable utility functions for type conversions and checks. Stop writing the sam
 ## Installation
 
 ```bash
-npm install dry-types
+npm install @jasonbyrne/dry-types
 ```
 
 ## Usage
 
 ```javascript
-import { toNumber, isNumber, toString, isString } from "dry-types";
+import { toNumber, isNumber, toString, isString } from "@jasonbyrne/dry-types";
 
 // Type conversions
 const num = toNumber("42"); // 42
