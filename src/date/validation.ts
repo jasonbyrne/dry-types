@@ -86,13 +86,13 @@ export function isToday(date: unknown): boolean {
  *
  * @param dateToCheck - The date to check (automatically detected and converted)
  * @param endDate - The end date to compare against (treated as end of day, automatically detected and converted)
- * @returns true if dateToCheck is before or equal to the end of endDate's day
+ * @returns true if dateToCheck is before or equal to the end of endDate's day, or true if endDate is null (any date is valid)
  */
 export function isBeforeEndDate(
   dateToCheck: unknown,
   endDate: unknown
 ): boolean {
-  if (endDate === null || endDate === undefined) return false; // No end date means no limit
+  if (endDate === null || endDate === undefined) return true; // No end date means any date is valid
   if (dateToCheck === null || dateToCheck === undefined) return false;
 
   const checkDate = getStartOfDay(dateToCheck);

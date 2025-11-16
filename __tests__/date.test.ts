@@ -612,8 +612,8 @@ describe("date", () => {
       expect(isBeforeEndDate("2024-01-25", "2024-01-20")).toBe(false);
     });
 
-    it("should return false when end date is null", () => {
-      expect(isBeforeEndDate("2024-01-15", null)).toBe(false);
+    it("should return true when end date is null (any date is valid)", () => {
+      expect(isBeforeEndDate("2024-01-15", null)).toBe(true);
     });
   });
 
@@ -652,6 +652,12 @@ describe("date", () => {
     it("should handle null end date", () => {
       expect(isDateInRange("2024-06-15", "2024-01-01", null)).toBe(true);
       expect(isDateInRange("2023-12-31", "2024-01-01", null)).toBe(false);
+    });
+
+    it("should handle both null start and end date (any date is valid)", () => {
+      expect(isDateInRange("2024-06-15", null, null)).toBe(true);
+      expect(isDateInRange("2023-12-31", null, null)).toBe(true);
+      expect(isDateInRange("2025-01-01", null, null)).toBe(true);
     });
   });
 

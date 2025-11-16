@@ -187,7 +187,6 @@ Functions that retrieve or compute a value from input(s). These don't convert ty
 - `getRelativeTime(date: unknown, options?: RelativeTimeOptions): string | null` - Gets a human-readable relative time string (e.g., "2 years ago", "3 minutes ago")
 - `getLastDateOfMonth(value?: unknown): string` - Gets the last date of the month for a given date
 - `getLastDateOfYear(value?: unknown): string` - Gets the last date of the year for a given date
-- `getLastDateOfWeek(value?: unknown): string` - Gets the last date of the week (7 days from the given date)
 - `getLastDateOfQuarter(value?: unknown): string` - Gets the last date of the quarter for a given date
 - `getFirstDateOfMonth(value?: unknown): string` - Gets the first date of the month for a given date
 - `getFirstDateOfYear(value?: unknown): string` - Gets the first date of the year for a given date
