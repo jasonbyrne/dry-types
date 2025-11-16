@@ -7,7 +7,7 @@ import {
   extractAllCaptureGroups,
   findFirstMatchingPattern,
   extractBetween,
-  extractNumbers,
+  extractNumbersFromPattern,
   matchAndExtract,
   toRegex,
   containsAny,
@@ -123,14 +123,14 @@ describe("regex", () => {
     });
   });
 
-  describe("extractNumbers", () => {
+  describe("extractNumbersFromPattern", () => {
     it("should extract numeric values from capture groups", () => {
-      expect(extractNumbers("price: $123.45", [/\$(\d+)\.(\d+)/])).toEqual([123, 45]);
-      expect(extractNumbers("age: 25", [/age: (\d+)/])).toEqual([25]);
+      expect(extractNumbersFromPattern("price: $123.45", [/\$(\d+)\.(\d+)/])).toEqual([123, 45]);
+      expect(extractNumbersFromPattern("age: 25", [/age: (\d+)/])).toEqual([25]);
     });
 
     it("should return empty array if no match", () => {
-      expect(extractNumbers("hello world", [/(\d+)/])).toEqual([]);
+      expect(extractNumbersFromPattern("hello world", [/(\d+)/])).toEqual([]);
     });
   });
 

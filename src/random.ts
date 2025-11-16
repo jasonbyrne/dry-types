@@ -1,12 +1,24 @@
+import { toDate } from "./date";
+
 /**
  * Picks a random element from an array, or multiple random elements if count is provided
+ *
+ * @overload
+ * @param arr - The array to pick from
+ * @returns A single random element from the array
+ *
+ * @overload
+ * @param arr - The array to pick from
+ * @param count - Number of random elements to pick
+ * @returns An array of random elements (may contain duplicates if count > arr.length)
+ *
  * @param arr - The array to pick from
  * @param count - Optional number of random elements to pick
  * @returns A single random element, or an array of random elements if count is provided
  * @example
  * ```ts
- * pickRandom([1, 2, 3, 4, 5]) // Returns one random number
- * pickRandom([1, 2, 3, 4, 5], 3) // Returns array of 3 random numbers
+ * pickRandom([1, 2, 3, 4, 5]) // Returns one random number (e.g., 3)
+ * pickRandom([1, 2, 3, 4, 5], 3) // Returns array of 3 random numbers (e.g., [2, 5, 1])
  * ```
  */
 export function pickRandom<T>(arr: T[]): T;
@@ -22,13 +34,24 @@ export function pickRandom<T>(arr: T[], count?: number) {
 
 /**
  * Picks a random index from an array, or multiple random indices if count is provided
+ * Returns unique indices (no duplicates)
+ *
+ * @overload
+ * @param arr - The array to pick indices from
+ * @returns A single random index (0 to arr.length - 1)
+ *
+ * @overload
+ * @param arr - The array to pick indices from
+ * @param count - Number of random indices to pick
+ * @returns An array of unique random indices (length will be min(count, arr.length))
+ *
  * @param arr - The array to pick indices from
  * @param count - Optional number of random indices to pick
- * @returns A single random index, or an array of random indices if count is provided
+ * @returns A single random index, or an array of unique random indices if count is provided
  * @example
  * ```ts
- * pickRandomIndex([1, 2, 3, 4, 5]) // Returns one random index (0-4)
- * pickRandomIndex([1, 2, 3, 4, 5], 3) // Returns array of 3 random indices
+ * pickRandomIndex([1, 2, 3, 4, 5]) // Returns one random index (0-4, e.g., 2)
+ * pickRandomIndex([1, 2, 3, 4, 5], 3) // Returns array of 3 unique random indices (e.g., [0, 3, 1])
  * ```
  */
 export function pickRandomIndex<T>(arr: T[]): number;
@@ -114,10 +137,13 @@ export function randomString(length: number): string {
  * randomDate(new Date("2024-01-01"), new Date("2024-12-31")) // Random date in 2024
  * ```
  */
-export function randomDate(min: Date, max: Date): Date {
-  const range = max.getTime() - min.getTime();
+export function randomDate(min: unknown, max: unknown): Date {
+  const minDate = toDate(min, new Date());
+  const maxDate = toDate(max, new Date());
+  if (minDate === null || maxDate === null) return new Date();
+  const range = maxDate.getTime() - minDate.getTime();
   const randomTime = Math.random() * range;
-  return new Date(min.getTime() + randomTime);
+  return new Date(minDate.getTime() + randomTime);
 }
 
 /**

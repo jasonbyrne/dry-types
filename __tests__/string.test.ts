@@ -14,6 +14,17 @@ import {
   stripSpecialCharacters,
   stripExtraWhitespace,
   getClampedString,
+  padCenter,
+  stripNonAlphanumeric,
+  stripNonNumeric,
+  stripNonAlphabetic,
+  reverse,
+  countOccurrences,
+  slugify,
+  mask,
+  escapeHtml,
+  unescapeHtml,
+  escapeRegex,
 } from "../src/string.js";
 import {
   isString,
@@ -516,5 +527,218 @@ describe("string", () => {
       expect(getClampedString("test", [])).toBeUndefined();
     });
   });
+
+  describe("padCenter", () => {
+    it("should center a string by padding on both sides", () => {
+      expect(padCenter("hello", 10)).toBe("  hello   ");
+      expect(padCenter("hi", 5)).toBe(" hi  ");
+    });
+
+    it("should handle strings longer than target length", () => {
+      expect(padCenter("hello world", 5)).toBe("hello world");
+    });
+
+    it("should use custom padding character", () => {
+      expect(padCenter("hello", 10, "*")).toBe("**hello***");
+      expect(padCenter("hi", 5, "-")).toBe("-hi--");
+    });
+
+    it("should handle empty strings", () => {
+      expect(padCenter("", 5)).toBe("     ");
+      expect(padCenter("", 5, "*")).toBe("*****");
+    });
+
+    it("should convert non-string values", () => {
+      expect(padCenter(123, 5)).toBe(" 123 ");
+      expect(padCenter(null, 5)).toBe("     ");
+      expect(padCenter(undefined, 5)).toBe("     ");
+    });
+
+    it("should handle odd padding lengths", () => {
+      expect(padCenter("hi", 7)).toBe("  hi   "); // 2 left, 3 right
+    });
+  });
+
+  describe("stripNonAlphanumeric", () => {
+    it("should remove all non-alphanumeric characters", () => {
+      expect(stripNonAlphanumeric("hello123!@#world")).toBe("hello123world");
+      expect(stripNonAlphanumeric("test-123_abc")).toBe("test123abc");
+    });
+
+    it("should keep only letters and numbers", () => {
+      expect(stripNonAlphanumeric("Hello World 123")).toBe("HelloWorld123");
+      expect(stripNonAlphanumeric("a1b2c3")).toBe("a1b2c3");
+    });
+
+    it("should handle empty strings", () => {
+      expect(stripNonAlphanumeric("")).toBe("");
+    });
+  });
+
+  describe("stripNonNumeric", () => {
+    it("should remove all non-numeric characters", () => {
+      expect(stripNonNumeric("hello123world")).toBe("123");
+      expect(stripNonNumeric("abc-123-def")).toBe("123");
+    });
+
+    it("should keep only digits", () => {
+      expect(stripNonNumeric("Phone: 555-1234")).toBe("5551234");
+      expect(stripNonNumeric("123")).toBe("123");
+    });
+
+    it("should handle empty strings", () => {
+      expect(stripNonNumeric("")).toBe("");
+    });
+  });
+
+  describe("stripNonAlphabetic", () => {
+    it("should remove all non-alphabetic characters", () => {
+      expect(stripNonAlphabetic("hello123world")).toBe("helloworld");
+      expect(stripNonAlphabetic("test-123_abc")).toBe("testabc");
+    });
+
+    it("should keep only letters", () => {
+      expect(stripNonAlphabetic("Hello World 123")).toBe("HelloWorld");
+      expect(stripNonAlphabetic("abc")).toBe("abc");
+    });
+
+    it("should handle empty strings", () => {
+      expect(stripNonAlphabetic("")).toBe("");
+    });
+  });
+
+  describe("reverse", () => {
+    it("should reverse a string", () => {
+      expect(reverse("hello")).toBe("olleh");
+      expect(reverse("world")).toBe("dlrow");
+    });
+
+    it("should handle empty strings", () => {
+      expect(reverse("")).toBe("");
+    });
+
+    it("should handle single character", () => {
+      expect(reverse("a")).toBe("a");
+    });
+
+    it("should handle palindromes", () => {
+      expect(reverse("racecar")).toBe("racecar");
+    });
+  });
+
+  describe("countOccurrences", () => {
+    it("should count occurrences of a substring", () => {
+      expect(countOccurrences("hello hello world", "hello")).toBe(2);
+      expect(countOccurrences("banana", "na")).toBe(2);
+    });
+
+    it("should return 0 when substring not found", () => {
+      expect(countOccurrences("hello world", "xyz")).toBe(0);
+    });
+
+    it("should return 0 for empty substring", () => {
+      expect(countOccurrences("hello", "")).toBe(0);
+    });
+
+    it("should handle overlapping matches", () => {
+      expect(countOccurrences("aaa", "aa")).toBe(2);
+    });
+
+    it("should escape special regex characters", () => {
+      expect(countOccurrences("test.test", ".")).toBe(1);
+      expect(countOccurrences("a*b*c", "*")).toBe(2);
+    });
+  });
+
+  describe("slugify", () => {
+    it("should convert string to URL-friendly slug", () => {
+      expect(slugify("Hello World")).toBe("hello-world");
+      expect(slugify("Test String 123")).toBe("test-string-123");
+    });
+
+    it("should handle special characters", () => {
+      expect(slugify("Hello@World#Test")).toBe("helloworldtest");
+      expect(slugify("test_string-123")).toBe("test-string-123");
+    });
+
+    it("should trim and normalize", () => {
+      expect(slugify("  Hello World  ")).toBe("hello-world");
+      expect(slugify("hello---world")).toBe("hello-world");
+    });
+
+    it("should handle empty strings", () => {
+      expect(slugify("")).toBe("");
+    });
+  });
+
+  describe("mask", () => {
+    it("should mask a portion of a string", () => {
+      expect(mask("1234567890", 3, 7)).toBe("123****890");
+      expect(mask("hello world", 2, 7)).toBe("he*****orld");
+    });
+
+    it("should use custom mask character", () => {
+      expect(mask("1234567890", 3, 7, "X")).toBe("123XXXX890");
+    });
+
+    it("should handle edge cases", () => {
+      expect(mask("hello", 0, 5)).toBe("*****");
+      expect(mask("hello", 0, 0)).toBe("hello");
+      expect(mask("hello", 5, 10)).toBe("hello");
+    });
+
+    it("should handle invalid ranges", () => {
+      expect(mask("hello", 3, 2)).toBe("hello");
+      expect(mask("hello", -1, 3)).toBe("***lo");
+      expect(mask("hello", 2, 10)).toBe("he***");
+    });
+  });
+
+  describe("escapeHtml", () => {
+    it("should escape HTML special characters", () => {
+      expect(escapeHtml("<div>Hello</div>")).toBe("&lt;div&gt;Hello&lt;/div&gt;");
+      expect(escapeHtml('He said "hello"')).toBe("He said &quot;hello&quot;");
+    });
+
+    it("should escape ampersands", () => {
+      expect(escapeHtml("A & B")).toBe("A &amp; B");
+    });
+
+    it("should handle empty strings", () => {
+      expect(escapeHtml("")).toBe("");
+    });
+  });
+
+  describe("unescapeHtml", () => {
+    it("should unescape HTML entities", () => {
+      expect(unescapeHtml("&lt;div&gt;Hello&lt;/div&gt;")).toBe("<div>Hello</div>");
+      expect(unescapeHtml("He said &quot;hello&quot;")).toBe('He said "hello"');
+    });
+
+    it("should unescape ampersands", () => {
+      expect(unescapeHtml("A &amp; B")).toBe("A & B");
+    });
+
+    it("should handle empty strings", () => {
+      expect(unescapeHtml("")).toBe("");
+    });
+  });
+
+  describe("escapeRegex", () => {
+    it("should escape special regex characters", () => {
+      expect(escapeRegex("test.string")).toBe("test\\.string");
+      expect(escapeRegex("a*b+c?")).toBe("a\\*b\\+c\\?");
+    });
+
+    it("should escape brackets and parentheses", () => {
+      expect(escapeRegex("test[123]")).toBe("test\\[123\\]");
+      expect(escapeRegex("test(123)")).toBe("test\\(123\\)");
+    });
+
+    it("should handle empty strings", () => {
+      expect(escapeRegex("")).toBe("");
+    });
+  });
+
 });
 

@@ -3,11 +3,8 @@ import {
   coalesce,
   toLength,
   toBoolean,
-  toJSON,
-  fromJSON,
   defer,
   debounce,
-  generatePassword,
   generateUniqueId,
   deepEquals,
 } from "../src/util.js";
@@ -349,65 +346,6 @@ describe("util", () => {
     });
   });
 
-  describe("toJSON", () => {
-    it("should stringify valid values", () => {
-      expect(toJSON({ a: 1, b: 2 }, "default")).toBe('{"a":1,"b":2}');
-      expect(toJSON([1, 2, 3], "default")).toBe("[1,2,3]");
-      expect(toJSON("string", "default")).toBe('"string"');
-      expect(toJSON(123, "default")).toBe("123");
-      expect(toJSON(true, "default")).toBe("true");
-      expect(toJSON(null, "default")).toBe("null");
-    });
-
-    it("should return default value for circular references", () => {
-      const circular: any = { a: 1 };
-      circular.self = circular;
-      expect(toJSON(circular, "default")).toBe("default");
-    });
-
-    it("should return default value for functions", () => {
-      expect(toJSON(() => {}, "default")).toBe("default");
-      expect(toJSON(function () {}, "default")).toBe("default");
-    });
-
-    it("should return default value for undefined", () => {
-      expect(toJSON(undefined, "default")).toBe("default");
-    });
-
-    it("should handle BigInt by returning default", () => {
-      expect(toJSON(BigInt(123), "default")).toBe("default");
-    });
-  });
-
-  describe("fromJSON", () => {
-    it("should parse valid JSON strings", () => {
-      expect(fromJSON('{"a":1,"b":2}', {})).toEqual({ a: 1, b: 2 });
-      expect(fromJSON("[1,2,3]", [])).toEqual([1, 2, 3]);
-      expect(fromJSON('"string"', "")).toBe("string");
-      expect(fromJSON("123", 0)).toBe(123);
-      expect(fromJSON("true", false)).toBe(true);
-      expect(fromJSON("null", {})).toBe(null);
-    });
-
-    it("should return default value for invalid JSON", () => {
-      expect(fromJSON("{ invalid json }", {})).toEqual({});
-      expect(fromJSON("not json", "default")).toBe("default");
-      expect(fromJSON("", "default")).toBe("default");
-    });
-
-    it("should return default value for non-string values", () => {
-      expect(fromJSON(null, "default")).toBe("default");
-      expect(fromJSON(123, "default")).toBe("default");
-      expect(fromJSON({}, "default")).toBe("default");
-      expect(fromJSON([], "default")).toBe("default");
-      expect(fromJSON(undefined, "default")).toBe("default");
-    });
-
-    it("should return default value for empty string", () => {
-      expect(fromJSON("", "default")).toBe("default");
-    });
-  });
-
   describe("defer", () => {
     it("should defer function execution", (done) => {
       let called = false;
@@ -452,33 +390,6 @@ describe("util", () => {
       }, 50);
 
       await expect(debouncedFn()).rejects.toThrow("test error");
-    });
-  });
-
-  describe("generatePassword", () => {
-    it("should generate password of specified length", () => {
-      const password = generatePassword(12);
-      expect(password.length).toBe(12);
-    });
-
-    it("should generate different passwords", () => {
-      const password1 = generatePassword(12);
-      const password2 = generatePassword(12);
-      // Very unlikely to be the same
-      expect(password1).not.toBe(password2);
-    });
-
-    it("should use default length if not specified", () => {
-      const password = generatePassword();
-      expect(password.length).toBe(12);
-    });
-
-    it("should contain alphanumeric and special characters", () => {
-      const password = generatePassword(100);
-      expect(/[A-Z]/.test(password)).toBe(true);
-      expect(/[a-z]/.test(password)).toBe(true);
-      expect(/[0-9]/.test(password)).toBe(true);
-      expect(/[!@#$%^&*]/.test(password)).toBe(true);
     });
   });
 

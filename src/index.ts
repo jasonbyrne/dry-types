@@ -10,6 +10,7 @@ import * as regex from "./regex";
 import * as random from "./random";
 import * as hash from "./hash";
 import * as enumModule from "./enum";
+import * as password from "./password";
 
 // Export all types
 export * from "./generics";
@@ -28,6 +29,7 @@ export * from "./regex";
 export * from "./random";
 export * from "./hash";
 export * from "./enum";
+export * from "./password";
 
 // Default export for convenience
 const dry = {
@@ -43,6 +45,7 @@ const dry = {
   ...random,
   ...hash,
   ...enumModule,
+  ...password,
 };
 
 export default dry;

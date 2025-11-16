@@ -1,6 +1,18 @@
+import { JSONValue } from "./generics";
 import { isNullOrUndefined } from "./is";
+import { toString } from "./string";
 
-// is* functions moved to ./is.ts
+/**
+ * General utility functions
+ *
+ * This module provides:
+ * - Type-safe conditional transformations
+ * - Value coalescing and default handling
+ * - JSON serialization/deserialization
+ * - Async function utilities (debounce, defer)
+ * - Deep equality comparison
+ * - Unique ID generation
+ */
 
 /**
  * Type-safe conditional transformation: returns undefined if value is undefined,
@@ -62,8 +74,6 @@ export function toBoolean(value: unknown): boolean {
   return false;
 }
 
-// is* functions moved to ./is.ts
-
 /**
  * Safely stringify a value to JSON
  * Returns the JSON string representation of the value, or the default value if stringification fails
@@ -71,10 +81,10 @@ export function toBoolean(value: unknown): boolean {
  * @param defaultValue - The default value to return if stringification fails
  * @returns The JSON string representation, or the default value
  */
-export function toJSON<T = string | null | undefined>(
-  value: unknown,
+export function toJsonString<T = string | null | undefined>(
+  value: JSONValue,
   defaultValue: T = null as T
-): string | T {
+): JSONValue | T {
   try {
     const result = JSON.stringify(value);
     // JSON.stringify returns undefined for functions and undefined values
@@ -94,14 +104,20 @@ export function toJSON<T = string | null | undefined>(
  * @param defaultValue - The default value to return if parsing fails
  * @returns The parsed value, or the default value
  */
-export function fromJSON<T>(value: unknown, defaultValue: T): T {
-  if (typeof value !== "string") {
-    return defaultValue;
-  }
+export function toJsonValue<T>(
+  value: unknown,
+  defaultValue: T = null as T
+): JSONValue | T {
+  const jsonString = toString(value, null);
+  if (jsonString === null) return defaultValue;
   try {
-    const parsed = JSON.parse(value);
-    return parsed as T;
-  } catch {
+    const result = JSON.parse(jsonString);
+    // JSON.parse returns undefined for functions and undefined values
+    if (result === undefined) {
+      return defaultValue;
+    }
+    return result as JSONValue | T;
+  } catch (error) {
     return defaultValue;
   }
 }
@@ -116,15 +132,33 @@ export function fromJSON<T>(value: unknown, defaultValue: T): T {
  * defer(() => console.log("Hello"), 1000) // Logs "Hello" after 1 second
  * ```
  */
-export const defer = (fn: () => Promise<void> | void, delay: number = 100) => {
+export function defer(
+  fn: () => Promise<void> | void,
+  delay: number = 100
+): ReturnType<typeof setTimeout> {
   return setTimeout(fn, delay);
-};
+}
 
 /**
  * Debounces an async function, executing it only after the specified delay has passed since the last invocation.
- * @param func The async function to debounce
- * @param delay The delay in milliseconds
+ * All calls made within the debounce window will receive the same promise, ensuring only one execution occurs.
+ *
+ * @param func - The async function to debounce
+ * @param delay - The delay in milliseconds before executing the function (default: 300)
  * @returns A debounced version of the function that returns a Promise
+ *
+ * @example
+ * ```ts
+ * const debouncedSearch = debounce(async (query: string) => {
+ *   return await fetch(`/api/search?q=${query}`);
+ * }, 500);
+ *
+ * // Multiple rapid calls will only execute once after 500ms
+ * debouncedSearch("test"); // Promise A
+ * debouncedSearch("test2"); // Same Promise A (previous call cancelled)
+ * debouncedSearch("test3"); // Same Promise A (previous call cancelled)
+ * // After 500ms, only the last call executes and all promises resolve with its result
+ * ```
  */
 export function debounce<TArgs extends unknown[], TResult>(
   func: (...args: TArgs) => Promise<TResult>,
@@ -193,21 +227,6 @@ export function debounce<TArgs extends unknown[], TResult>(
 }
 
 /**
- * Generate a secure random password
- */
-export function generatePassword(length: number = 12): string {
-  const charset =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-  let password = "";
-
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-
-  return password;
-}
-
-/**
  * Generates a unique ID for form elements and other components
  * @param prefix - Optional prefix for the ID (e.g., 'input', 'select', 'textarea')
  * @returns A unique ID string
@@ -231,12 +250,12 @@ export function generateUniqueId(prefix?: string): string {
  * deepEquals(new Date("2024-01-01"), new Date("2024-01-01")) // true
  * ```
  */
-export const deepEquals = (
+export function deepEquals(
   a: unknown,
   b: unknown,
   aStack: unknown[] = [],
   bStack: unknown[] = []
-): boolean => {
+): boolean {
   // Handle primitive types and null/undefined
   if (a === b) return true;
   if (a === null || b === null) return a === b;
@@ -312,4 +331,4 @@ export const deepEquals = (
   aStack.pop();
   bStack.pop();
   return true;
-};
+}

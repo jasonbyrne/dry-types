@@ -10,6 +10,7 @@ import {
   roundDown,
   roundUp,
   getNumbersBetween,
+  formatNumber,
 } from "../src/number.js";
 import {
   isInteger,
@@ -358,6 +359,90 @@ describe("number", () => {
 
     it("should handle negative numbers", () => {
       expect(getNumbersBetween(-2, 2)).toEqual([-2, -1, 0, 1, 2]);
+    });
+  });
+
+  describe("formatNumber", () => {
+    it("should format basic numbers with thousands separators", () => {
+      expect(formatNumber(1234.56)).toBe("1,234.56");
+      expect(formatNumber(1234567.89)).toBe("1,234,567.89");
+      expect(formatNumber(1000)).toBe("1,000");
+    });
+
+    it("should handle decimal places", () => {
+      expect(formatNumber(1234.5, { minDecimalPlaces: 2 })).toBe("1,234.50");
+      expect(formatNumber(1234.567, { maxDecimalPlaces: 2 })).toBe("1,234.57");
+      expect(formatNumber(1234.567, { maxDecimalPlaces: 2, minDecimalPlaces: 2 })).toBe("1,234.57");
+      expect(formatNumber(1234, { maxDecimalPlaces: 0 })).toBe("1,234");
+    });
+
+    it("should handle custom separators", () => {
+      expect(formatNumber(1234.56, { thousandSeparator: ".", decimalSeparator: "," })).toBe("1.234,56");
+      expect(formatNumber(1234.56, { thousandSeparator: " " })).toBe("1 234.56");
+    });
+
+    it("should handle negative numbers", () => {
+      expect(formatNumber(-1234.56)).toBe("-1,234.56");
+      expect(formatNumber(-1000)).toBe("-1,000");
+    });
+
+    it("should respect allowNegative constraint", () => {
+      expect(formatNumber(-100, { allowNegative: false })).toBe("");
+      expect(formatNumber(100, { allowNegative: false })).toBe("100");
+    });
+
+    it("should respect allowPositive constraint", () => {
+      expect(formatNumber(100, { allowPositive: false })).toBe("");
+      expect(formatNumber(-100, { allowPositive: false })).toBe("-100");
+    });
+
+    it("should respect allowZero constraint", () => {
+      expect(formatNumber(0, { allowZero: false })).toBe("");
+      expect(formatNumber(0, { allowZero: true })).toBe("0");
+    });
+
+    it("should handle zero", () => {
+      expect(formatNumber(0)).toBe("0");
+      expect(formatNumber(0, { minDecimalPlaces: 2 })).toBe("0.00");
+    });
+
+    it("should return empty string for invalid values", () => {
+      expect(formatNumber(null)).toBe("");
+      expect(formatNumber(undefined)).toBe("");
+      expect(formatNumber("invalid")).toBe("");
+      expect(formatNumber(NaN)).toBe("");
+      expect(formatNumber(Infinity)).toBe("");
+      expect(formatNumber(-Infinity)).toBe("");
+    });
+
+    it("should handle string inputs", () => {
+      expect(formatNumber("1234.56")).toBe("1,234.56");
+      expect(formatNumber("1000")).toBe("1,000");
+    });
+
+    it("should remove trailing zeros when appropriate", () => {
+      expect(formatNumber(1234.0)).toBe("1,234");
+      expect(formatNumber(1234.10)).toBe("1,234.1");
+      expect(formatNumber(1234.100)).toBe("1,234.1");
+    });
+
+    it("should use locale formatting when requested", () => {
+      const result = formatNumber(1234.56, { useLocaleFormatting: true, locale: "en-US" });
+      expect(result).toMatch(/1,234/);
+      
+      const resultDE = formatNumber(1234.56, { useLocaleFormatting: true, locale: "de-DE" });
+      expect(resultDE).toMatch(/1[.,]234/);
+    });
+
+    it("should handle small numbers", () => {
+      expect(formatNumber(0.123)).toBe("0.123");
+      expect(formatNumber(0.123456, { maxDecimalPlaces: 3 })).toBe("0.123");
+      expect(formatNumber(0.1, { minDecimalPlaces: 2 })).toBe("0.10");
+    });
+
+    it("should handle large numbers", () => {
+      expect(formatNumber(1234567890.12)).toBe("1,234,567,890.12");
+      expect(formatNumber(999999999)).toBe("999,999,999");
     });
   });
 });

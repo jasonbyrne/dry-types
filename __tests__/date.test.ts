@@ -14,13 +14,11 @@ import {
   getDateDifference,
   getLastDateOfMonth,
   getLastDateOfYear,
-  getLastDateOfWeek,
   getLastDateOfQuarter,
   getFirstDateOfMonth,
   getFirstDateOfYear,
   getFirstDateOfWeek,
   getFirstDateOfQuarter,
-  now,
   getMinDate,
   getMaxDate,
   getCurrentDateString,
@@ -37,14 +35,15 @@ import {
   addMinutes,
   addSeconds,
   isToday,
-  isYesterday,
-  isTomorrow,
   getDaysBetween,
   getMonthsBetween,
   getYearsBetween,
   getAge,
   getRelativeTime,
-} from "../src/date.js";
+  getYear,
+  getMonth,
+  getDayOfWeek,
+} from "../src/date/index.js";
 import {
   isDate,
   isDateString,
@@ -315,14 +314,6 @@ describe("date", () => {
     });
   });
 
-  describe("now", () => {
-    it("should return current date", () => {
-      const result = now();
-      expect(result).toBeInstanceOf(Date);
-      expect(result.getTime()).toBeLessThanOrEqual(Date.now());
-    });
-  });
-
   describe("getMinDate", () => {
     it("should return earliest date", () => {
       const dates = ["2024-06-15", "2024-01-01", "2024-12-31"];
@@ -354,6 +345,202 @@ describe("date", () => {
     it("should return current date as string", () => {
       const result = getCurrentDateString();
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+  });
+
+  describe("getYear", () => {
+    it("should return year from date", () => {
+      expect(getYear(new Date("2024-01-15"))).toBe(2024);
+      expect(getYear("2024-01-15")).toBe(2024);
+    });
+
+    it("should return current year if no date provided", () => {
+      const currentYear = new Date().getFullYear();
+      expect(getYear()).toBe(currentYear);
+    });
+  });
+
+  describe("getMonth", () => {
+    describe("with 'number' format (1-based)", () => {
+      it("should return month as number 1-12", () => {
+        expect(getMonth(new Date("2024-01-15"), { format: "number" })).toBe(1); // January
+        expect(getMonth(new Date("2024-02-15"), { format: "number" })).toBe(2); // February
+        expect(getMonth(new Date("2024-06-15"), { format: "number" })).toBe(6); // June
+        expect(getMonth(new Date("2024-12-15"), { format: "number" })).toBe(12); // December
+      });
+
+      it("should work with date strings", () => {
+        expect(getMonth("2024-01-15", { format: "number" })).toBe(1);
+        expect(getMonth("2024-12-31", { format: "number" })).toBe(12);
+      });
+
+      it("should work with options only (uses current date)", () => {
+        const currentMonth = new Date().getMonth() + 1; // 1-based
+        expect(getMonth({ format: "number" })).toBe(currentMonth);
+      });
+    });
+
+    describe("with 'number-zero-based' format (0-based)", () => {
+      it("should return month as number 0-11", () => {
+        expect(getMonth(new Date("2024-01-15"), { format: "number-zero-based" })).toBe(0); // January
+        expect(getMonth(new Date("2024-02-15"), { format: "number-zero-based" })).toBe(1); // February
+        expect(getMonth(new Date("2024-06-15"), { format: "number-zero-based" })).toBe(5); // June
+        expect(getMonth(new Date("2024-12-15"), { format: "number-zero-based" })).toBe(11); // December
+      });
+
+      it("should work with date strings", () => {
+        expect(getMonth("2024-01-15", { format: "number-zero-based" })).toBe(0);
+        expect(getMonth("2024-12-31", { format: "number-zero-based" })).toBe(11);
+      });
+
+      it("should work with options only (uses current date)", () => {
+        const currentMonth = new Date().getMonth(); // 0-based
+        expect(getMonth({ format: "number-zero-based" })).toBe(currentMonth);
+      });
+    });
+
+    describe("with string formats", () => {
+      it("should return month as 'long' string", () => {
+        const result = getMonth(new Date("2024-01-15"), { format: "long" });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("January");
+      });
+
+      it("should return month as 'short' string", () => {
+        const result = getMonth(new Date("2024-01-15"), { format: "short" });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("Jan");
+      });
+
+      it("should return month as 'narrow' string", () => {
+        const result = getMonth(new Date("2024-01-15"), { format: "narrow" });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("J");
+      });
+
+      it("should support locale", () => {
+        const result = getMonth(new Date("2024-01-15"), {
+          format: "long",
+          locale: "es",
+        });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("enero");
+      });
+
+      it("should work with options only (uses current date)", () => {
+        const result = getMonth({ format: "long" });
+        expect(typeof result).toBe("string");
+        expect(result.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe("getDayOfWeek", () => {
+    // Use explicit dates to avoid timezone issues
+    // Create dates using Date constructor with year, month (0-based), day
+    const sunday = new Date(2024, 0, 7); // January 7, 2024 is a Sunday
+    const monday = new Date(2024, 0, 8); // January 8, 2024 is a Monday
+    const tuesday = new Date(2024, 0, 9); // January 9, 2024 is a Tuesday
+    const wednesday = new Date(2024, 0, 10); // January 10, 2024 is a Wednesday
+    const thursday = new Date(2024, 0, 11); // January 11, 2024 is a Thursday
+    const friday = new Date(2024, 0, 12); // January 12, 2024 is a Friday
+    const saturday = new Date(2024, 0, 13); // January 13, 2024 is a Saturday
+
+    describe("with 'number' format (1-based, 1=Sunday)", () => {
+      it("should return day of week as number 1-7", () => {
+        expect(getDayOfWeek(sunday, { format: "number" })).toBe(1); // Sunday
+        expect(getDayOfWeek(monday, { format: "number" })).toBe(2); // Monday
+        expect(getDayOfWeek(tuesday, { format: "number" })).toBe(3); // Tuesday
+        expect(getDayOfWeek(wednesday, { format: "number" })).toBe(4); // Wednesday
+        expect(getDayOfWeek(thursday, { format: "number" })).toBe(5); // Thursday
+        expect(getDayOfWeek(friday, { format: "number" })).toBe(6); // Friday
+        expect(getDayOfWeek(saturday, { format: "number" })).toBe(7); // Saturday
+      });
+
+      it("should work with date strings", () => {
+        // Test that date strings work (values may vary by timezone, so just verify it returns a number)
+        const result1 = getDayOfWeek("2024-01-07", { format: "number" });
+        const result2 = getDayOfWeek("2024-01-08", { format: "number" });
+        expect(typeof result1).toBe("number");
+        expect(typeof result2).toBe("number");
+        expect(result1).toBeGreaterThanOrEqual(1);
+        expect(result1).toBeLessThanOrEqual(7);
+        expect(result2).toBeGreaterThanOrEqual(1);
+        expect(result2).toBeLessThanOrEqual(7);
+        // The two dates should be different days
+        expect(result1).not.toBe(result2);
+      });
+
+      it("should work with options only (uses current date)", () => {
+        const currentDay = new Date().getDay() + 1; // 1-based (1=Sunday)
+        expect(getDayOfWeek({ format: "number" })).toBe(currentDay);
+      });
+    });
+
+    describe("with 'number-zero-based' format (0-based, 0=Sunday)", () => {
+      it("should return day of week as number 0-6", () => {
+        expect(getDayOfWeek(sunday, { format: "number-zero-based" })).toBe(0); // Sunday
+        expect(getDayOfWeek(monday, { format: "number-zero-based" })).toBe(1); // Monday
+        expect(getDayOfWeek(tuesday, { format: "number-zero-based" })).toBe(2); // Tuesday
+        expect(getDayOfWeek(wednesday, { format: "number-zero-based" })).toBe(3); // Wednesday
+        expect(getDayOfWeek(thursday, { format: "number-zero-based" })).toBe(4); // Thursday
+        expect(getDayOfWeek(friday, { format: "number-zero-based" })).toBe(5); // Friday
+        expect(getDayOfWeek(saturday, { format: "number-zero-based" })).toBe(6); // Saturday
+      });
+
+      it("should work with date strings", () => {
+        // Test that date strings work (values may vary by timezone, so just verify it returns a number)
+        const result1 = getDayOfWeek("2024-01-07", { format: "number-zero-based" });
+        const result2 = getDayOfWeek("2024-01-08", { format: "number-zero-based" });
+        expect(typeof result1).toBe("number");
+        expect(typeof result2).toBe("number");
+        expect(result1).toBeGreaterThanOrEqual(0);
+        expect(result1).toBeLessThanOrEqual(6);
+        expect(result2).toBeGreaterThanOrEqual(0);
+        expect(result2).toBeLessThanOrEqual(6);
+        // The two dates should be different days
+        expect(result1).not.toBe(result2);
+      });
+
+      it("should work with options only (uses current date)", () => {
+        const currentDay = new Date().getDay(); // 0-based (0=Sunday)
+        expect(getDayOfWeek({ format: "number-zero-based" })).toBe(currentDay);
+      });
+    });
+
+    describe("with string formats", () => {
+      it("should return day of week as 'long' string", () => {
+        const result = getDayOfWeek(monday, { format: "long" });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("Monday");
+      });
+
+      it("should return day of week as 'short' string", () => {
+        const result = getDayOfWeek(monday, { format: "short" });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("Mon");
+      });
+
+      it("should return day of week as 'narrow' string", () => {
+        const result = getDayOfWeek(monday, { format: "narrow" });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("M");
+      });
+
+      it("should support locale", () => {
+        const result = getDayOfWeek(monday, {
+          format: "long",
+          locale: "es",
+        });
+        expect(typeof result).toBe("string");
+        expect(result).toBe("lunes");
+      });
+
+      it("should work with options only (uses current date)", () => {
+        const result = getDayOfWeek({ format: "long" });
+        expect(typeof result).toBe("string");
+        expect(result.length).toBeGreaterThan(0);
+      });
     });
   });
 
@@ -620,44 +807,6 @@ describe("date", () => {
     it("should return false for invalid date", () => {
       expect(isToday(null)).toBe(false);
       expect(isToday("invalid")).toBe(false);
-    });
-  });
-
-  describe("isYesterday", () => {
-    it("should return true for yesterday", () => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      expect(isYesterday(yesterday)).toBe(true);
-    });
-
-    it("should return false for other dates", () => {
-      expect(isYesterday(new Date())).toBe(false);
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      expect(isYesterday(tomorrow)).toBe(false);
-    });
-
-    it("should return false for invalid date", () => {
-      expect(isYesterday(null)).toBe(false);
-    });
-  });
-
-  describe("isTomorrow", () => {
-    it("should return true for tomorrow", () => {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      expect(isTomorrow(tomorrow)).toBe(true);
-    });
-
-    it("should return false for other dates", () => {
-      expect(isTomorrow(new Date())).toBe(false);
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      expect(isTomorrow(yesterday)).toBe(false);
-    });
-
-    it("should return false for invalid date", () => {
-      expect(isTomorrow(null)).toBe(false);
     });
   });
 

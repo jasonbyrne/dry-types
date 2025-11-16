@@ -10,7 +10,7 @@
  * @param data - Any JSON-serializable object
  * @returns A hex string representation of the SHA-256 hash
  */
-export async function createObjectHash(data: unknown): Promise<string> {
+export async function generateObjectHash(data: unknown): Promise<string> {
   // Normalize the object by sorting keys
   const normalized = JSON.stringify(data, (_, value) => {
     // If value is an object and not null, sort its keys
@@ -68,7 +68,7 @@ export async function createObjectHash(data: unknown): Promise<string> {
  * @param data - Any JSON-serializable object
  * @returns A numeric hash code
  */
-export function quickHash(data: unknown): number {
+export function generateQuickHash(data: unknown): number {
   const str = JSON.stringify(data, (_, value) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
       return Object.keys(value)

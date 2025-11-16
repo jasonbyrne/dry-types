@@ -1,6 +1,6 @@
 {
   "name": "@jasonbyrne/dry-types",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Reusable utility functions for type conversions and checks",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -13,6 +13,71 @@
       "import": "./dist/index.esm.js",
       "require": "./dist/index.js",
       "default": "./dist/index.esm.js"
+    },
+    "./array": {
+      "types": "./dist/array.d.ts",
+      "import": "./dist/array.esm.js",
+      "default": "./dist/array.esm.js"
+    },
+    "./currency": {
+      "types": "./dist/currency.d.ts",
+      "import": "./dist/currency.esm.js",
+      "default": "./dist/currency.esm.js"
+    },
+    "./date": {
+      "types": "./dist/date.d.ts",
+      "import": "./dist/date.esm.js",
+      "default": "./dist/date.esm.js"
+    },
+    "./enum": {
+      "types": "./dist/enum.d.ts",
+      "import": "./dist/enum.esm.js",
+      "default": "./dist/enum.esm.js"
+    },
+    "./hash": {
+      "types": "./dist/hash.d.ts",
+      "import": "./dist/hash.esm.js",
+      "default": "./dist/hash.esm.js"
+    },
+    "./is": {
+      "types": "./dist/is.d.ts",
+      "import": "./dist/is.esm.js",
+      "default": "./dist/is.esm.js"
+    },
+    "./number": {
+      "types": "./dist/number.d.ts",
+      "import": "./dist/number.esm.js",
+      "default": "./dist/number.esm.js"
+    },
+    "./object": {
+      "types": "./dist/object.d.ts",
+      "import": "./dist/object.esm.js",
+      "default": "./dist/object.esm.js"
+    },
+    "./password": {
+      "types": "./dist/password.d.ts",
+      "import": "./dist/password.esm.js",
+      "default": "./dist/password.esm.js"
+    },
+    "./random": {
+      "types": "./dist/random.d.ts",
+      "import": "./dist/random.esm.js",
+      "default": "./dist/random.esm.js"
+    },
+    "./regex": {
+      "types": "./dist/regex.d.ts",
+      "import": "./dist/regex.esm.js",
+      "default": "./dist/regex.esm.js"
+    },
+    "./string": {
+      "types": "./dist/string.d.ts",
+      "import": "./dist/string.esm.js",
+      "default": "./dist/string.esm.js"
+    },
+    "./util": {
+      "types": "./dist/util.d.ts",
+      "import": "./dist/util.esm.js",
+      "default": "./dist/util.esm.js"
     }
   },
   "files": [

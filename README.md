@@ -94,8 +94,6 @@ Functions that check if a value matches a certain condition. Return `boolean` an
 - `isAfterStartDate(dateToCheck: unknown, startDate: unknown): boolean` - Checks if date is after start date (treats start date as start of day)
 - `isDateInRange(dateToCheck: unknown, startDate: unknown, endDate: unknown): boolean` - Checks if date is within a date range
 - `isToday(date: unknown): boolean` - Checks if date is today
-- `isYesterday(date: unknown): boolean` - Checks if date is yesterday
-- `isTomorrow(date: unknown): boolean` - Checks if date is tomorrow
 
 ### Type Converters (`to*`)
 
@@ -234,7 +232,6 @@ Functions that randomly select or pick values from collections.
 
 ### Date Operations
 
-- `now(): Date` - Returns the current date and time as a Date object
 - `addDays(days: number, date?: unknown): string` - Adds days to a date and returns the result as a YYYY-MM-DD string
 - `addMonths(date: unknown, months: number): Date | null` - Adds months to a date
 - `addYears(date: unknown, years: number): Date | null` - Adds years to a date
@@ -262,8 +259,8 @@ Functions that randomly select or pick values from collections.
 
 ### Hash Utilities
 
-- `createObjectHash(data: unknown): Promise<string>` - Creates a SHA-256 hash from a JSON object (normalizes the object by sorting properties)
-- `quickHash(data: unknown): number` - Creates a deterministic hash from any JSON-serializable data (synchronous, not cryptographically secure)
+- `generateObjectHash(data: unknown): Promise<string>` - Creates a SHA-256 hash from a JSON object (normalizes the object by sorting properties)
+- `generateQuickHash(data: unknown): number` - Creates a deterministic hash from any JSON-serializable data (synchronous, not cryptographically secure)
 
 ### Enum Utilities
 
@@ -307,6 +304,26 @@ The library also exports useful TypeScript utility types:
 #### Regex Types (from `regex.ts`)
 
 - `Pattern` - `RegExp | string` - Type for regex patterns used in regex utility functions
+
+#### Date Types (from `date/constants.ts`)
+
+- `DateTimeFormatOptions` - Options for locale-specific date/time formatting
+- `MonthFormatOptions` - Options for formatting months (format, locale)
+- `DayOfWeekFormatOptions` - Options for formatting days of week (format, locale)
+- `RelativeTimeOptions` - Options for relative time formatting (referenceDate, threshold, round, maxUnit, minUnit)
+
+#### Number Types (from `number.ts`)
+
+- `NumberFormatOptions` - Options for number formatting
+
+#### Currency Types (from `currency.ts`)
+
+- `CurrencyFormatOptions` - Options for currency formatting
+
+#### Password Types (from `password.ts`)
+
+- `GeneratePasswordOptions` - Options for password generation
+- `PasswordRules` - Rules for password validation
 
 ## Naming Conventions
 

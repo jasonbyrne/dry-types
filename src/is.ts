@@ -1,6 +1,8 @@
 // Utility is* functions
 // Must be standalone functions to avoid circular dependencies
 
+import { JSONValue } from "./generics";
+
 /**
  * Checks if a value is null or undefined
  * @param value - The value to check
@@ -476,6 +478,11 @@ export function isDateTimeString(value: unknown): value is string {
   return isValidDateString(datePart) && isValidTimeString(timePart);
 }
 
+/**
+ * Checks if a value is a JSON string
+ * @param value - The value to check
+ * @returns True if the value is a JSON string
+ */
 export function isJsonString(value: unknown): value is string {
   if (!isString(value)) return false;
   try {

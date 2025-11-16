@@ -5,6 +5,13 @@
 export type Pattern = RegExp | string;
 
 /**
+ * Internal helper to escape special regex characters in a string
+ */
+function escapeRegexString(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
  * Tests if any of the provided patterns match the input string
  * @param input - The string to test
  * @param patterns - Array of patterns (RegExp or string) to test against
@@ -67,10 +74,7 @@ export function extractFromAnyPattern(
   for (const pattern of patterns) {
     if (typeof pattern === "string") {
       // For string patterns, create a simple regex to get match details
-      const regex = new RegExp(
-        pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-        "i"
-      );
+      const regex = new RegExp(escapeRegexString(pattern), "i");
       const match = input.match(regex);
       if (match) return match;
     } else {
@@ -98,10 +102,7 @@ export function extractAllMatches(
   const matches: RegExpMatchArray[] = [];
   for (const pattern of patterns) {
     if (typeof pattern === "string") {
-      const regex = new RegExp(
-        pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-        "gi"
-      );
+      const regex = new RegExp(escapeRegexString(pattern), "gi");
       const stringMatches = [...input.matchAll(regex)];
       matches.push(...stringMatches);
     } else {
@@ -200,12 +201,12 @@ export function extractBetween(
 ): string | null {
   const startRegex =
     typeof startPattern === "string"
-      ? new RegExp(startPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+      ? new RegExp(escapeRegexString(startPattern), "i")
       : startPattern;
 
   const endRegex =
     typeof endPattern === "string"
-      ? new RegExp(endPattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")
+      ? new RegExp(escapeRegexString(endPattern), "i")
       : endPattern;
 
   const startMatch = input.match(startRegex);
@@ -227,10 +228,10 @@ export function extractBetween(
  * @returns Array of numeric values extracted from capture groups
  * @example
  * ```ts
- * extractNumbers("price: $123.45", [/\$(\d+)\.(\d+)/]) // [123, 45]
+ * extractNumbersFromPattern("price: $123.45", [/\$(\d+)\.(\d+)/]) // [123, 45]
  * ```
  */
-export function extractNumbers(
+export function extractNumbersFromPattern(
   input: string,
   patterns: Array<Pattern>
 ): number[] {
@@ -281,7 +282,7 @@ export function toRegex(
   escapeSpecialChars: boolean = false
 ): RegExp {
   const processedPattern = escapeSpecialChars
-    ? pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    ? escapeRegexString(pattern)
     : pattern;
 
   return new RegExp(processedPattern, caseInsensitive ? "i" : "");
