@@ -120,7 +120,7 @@ Functions that transform or convert a value from one type/format to another. Ret
 #### Number Converters
 
 - `toNumber(value: unknown, defaultValue?: number): number` - Converts a value to a number
-- `toInteger(value: unknown, defaultValue?: number): number` - Converts a value to an integer
+- `toInteger(value: unknown, defaultValue?: number): number` - Converts a value to an integer (rounds to nearest)
 - `toPositiveNumber(value: unknown, defaultValue?: number): number` - Converts a value to a positive number
 - `toNegativeNumber(value: unknown, defaultValue?: number): number` - Converts a value to a negative number
 - `toNonNegativeNumber(value: unknown, defaultValue?: number): number` - Converts a value to a non-negative number (zero or positive)
@@ -129,6 +129,7 @@ Functions that transform or convert a value from one type/format to another. Ret
 - `round(value: unknown, precision?: number): number` - Rounds a number to a specified precision
 - `roundDown(value: unknown, precision?: number): number` - Rounds a number down to a specified precision
 - `roundUp(value: unknown, precision?: number): number` - Rounds a number up to a specified precision
+- `roundToNearest(value: unknown, divisor: number): number` - Rounds a number to the nearest multiple of a divisor (e.g., round to nearest 10, 0.5, etc.)
 
 #### Date Converters
 

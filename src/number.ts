@@ -102,16 +102,27 @@ export function toNumber<T extends number | undefined | null>(
 /**
  * Converts a value to an integer
  * @param value - The value to convert
- * @param defaultValue - The default value to return if conversion fails or value is not an integer (default: 0)
- * @returns An integer, or the default value if conversion fails
+ * @param defaultValue - The default value to return if conversion fails (default: 0)
+ * @returns An integer (rounded to nearest), or the default value if conversion fails
+ *
+ * @example
+ * ```ts
+ * toInteger(123) // 123
+ * toInteger(3.14) // 3
+ * toInteger(3.5) // 4
+ * toInteger("123") // 123
+ * toInteger("3.14") // 3
+ * toInteger(null) // 0
+ * toInteger(null, 100) // 100
+ * ```
  */
 export function toInteger<T extends number | undefined | null>(
   value: unknown,
   defaultValue: T = 0 as T
 ): T | number {
-  const num = toNumber(value, defaultValue);
-  if (!isInteger(num)) return defaultValue;
-  return num;
+  const num = toNumber(value, null);
+  if (num === null) return defaultValue;
+  return Math.round(num);
 }
 
 /**
@@ -227,6 +238,34 @@ export function roundUp(value: unknown, precision: number = 0): number {
   if (num === null) return 0;
   const multiplier = Math.pow(10, precision);
   return Math.ceil(num * multiplier) / multiplier;
+}
+
+/**
+ * Rounds a number to the nearest multiple of a divisor
+ * @param value - The value to round
+ * @param divisor - The divisor to round to (must be positive and finite)
+ * @returns The rounded number, or 0 if conversion fails or divisor is invalid
+ *
+ * @example
+ * ```ts
+ * roundToNearest(1234.56, 10) // 1230
+ * roundToNearest(1234.56, 100) // 1200
+ * roundToNearest(1234.56, 1000) // 1000
+ * roundToNearest(1234.56, 0.5) // 1234.5
+ * roundToNearest(1234.21, 0.25) // 1234.25
+ * roundToNearest(1237, 5) // 1235
+ * ```
+ */
+export function roundToNearest(value: unknown, divisor: number): number {
+  const num = toNumber(value, null);
+  if (num === null) return 0;
+
+  // Validate divisor: must be a positive, finite number
+  if (!isNumber(divisor) || divisor <= 0 || !isFinite(divisor)) {
+    return 0;
+  }
+
+  return Math.round(num / divisor) * divisor;
 }
 
 /**

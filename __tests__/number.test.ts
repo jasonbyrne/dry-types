@@ -9,6 +9,7 @@ import {
   round,
   roundDown,
   roundUp,
+  roundToNearest,
   getNumbersBetween,
   formatNumber,
 } from "../src/number.js";
@@ -163,14 +164,27 @@ describe("number", () => {
   describe("toInteger", () => {
     it("should convert to integer", () => {
       expect(toInteger(123)).toBe(123);
-      // toInteger only accepts values that are already integers, not floats
-      expect(toInteger(45.67)).toBe(0); // Returns default because 45.67 is not an integer
       expect(toInteger("123")).toBe(123);
     });
 
-    it("should return default for non-integer results", () => {
-      expect(toInteger(45.67, 0)).toBe(0);
-      expect(toInteger("45.67", 100)).toBe(100);
+    it("should round to nearest integer", () => {
+      expect(toInteger(3.14)).toBe(3);
+      expect(toInteger(3.5)).toBe(4);
+      expect(toInteger(3.6)).toBe(4);
+      expect(toInteger(45.67)).toBe(46);
+      expect(toInteger("45.67")).toBe(46);
+      expect(toInteger("3.14")).toBe(3);
+      expect(toInteger(-3.14)).toBe(-3);
+      expect(toInteger(-3.5)).toBe(-3);
+      expect(toInteger(-3.6)).toBe(-4);
+    });
+
+    it("should return default for invalid conversions", () => {
+      expect(toInteger("invalid", 100)).toBe(100);
+      expect(toInteger(null, 0)).toBe(0);
+      expect(toInteger(undefined, 0)).toBe(0);
+      expect(toInteger(Infinity, 0)).toBe(0);
+      expect(toInteger(-Infinity, 0)).toBe(0);
     });
   });
 
@@ -339,6 +353,112 @@ describe("number", () => {
     it("should round up to specified precision", () => {
       expect(roundUp(3.14159, 2)).toBe(3.15);
       expect(roundUp(3.141, 2)).toBe(3.15);
+    });
+  });
+
+  describe("roundToNearest", () => {
+    it("should round to nearest 10", () => {
+      expect(roundToNearest(1234.56, 10)).toBe(1230);
+      expect(roundToNearest(1235, 10)).toBe(1240);
+      expect(roundToNearest(1232, 10)).toBe(1230);
+      expect(roundToNearest(1237, 10)).toBe(1240);
+    });
+
+    it("should round to nearest 100", () => {
+      expect(roundToNearest(1234.56, 100)).toBe(1200);
+      expect(roundToNearest(1250, 100)).toBe(1300);
+      expect(roundToNearest(1249, 100)).toBe(1200);
+      expect(roundToNearest(1251, 100)).toBe(1300);
+    });
+
+    it("should round to nearest 1000", () => {
+      expect(roundToNearest(1234.56, 1000)).toBe(1000);
+      expect(roundToNearest(1500, 1000)).toBe(2000);
+      expect(roundToNearest(1499, 1000)).toBe(1000);
+      expect(roundToNearest(1501, 1000)).toBe(2000);
+    });
+
+    it("should round to nearest 5", () => {
+      expect(roundToNearest(1237, 5)).toBe(1235);
+      expect(roundToNearest(1238, 5)).toBe(1240);
+      expect(roundToNearest(1236, 5)).toBe(1235);
+      expect(roundToNearest(1239, 5)).toBe(1240);
+    });
+
+    it("should round to nearest 0.5", () => {
+      expect(roundToNearest(1234.56, 0.5)).toBeCloseTo(1234.5, 10);
+      expect(roundToNearest(1234.21, 0.5)).toBeCloseTo(1234.0, 10);
+      expect(roundToNearest(1234.26, 0.5)).toBeCloseTo(1234.5, 10);
+      expect(roundToNearest(1234.74, 0.5)).toBeCloseTo(1234.5, 10);
+      expect(roundToNearest(1234.76, 0.5)).toBeCloseTo(1235.0, 10);
+    });
+
+    it("should round to nearest 0.25", () => {
+      expect(roundToNearest(1234.21, 0.25)).toBeCloseTo(1234.25, 10);
+      expect(roundToNearest(1234.12, 0.25)).toBeCloseTo(1234.0, 10);
+      expect(roundToNearest(1234.13, 0.25)).toBeCloseTo(1234.25, 10);
+      expect(roundToNearest(1234.37, 0.25)).toBeCloseTo(1234.25, 10);
+      expect(roundToNearest(1234.38, 0.25)).toBeCloseTo(1234.5, 10);
+    });
+
+    it("should round to nearest 0.1", () => {
+      expect(roundToNearest(1234.56, 0.1)).toBeCloseTo(1234.6, 10);
+      expect(roundToNearest(1234.54, 0.1)).toBeCloseTo(1234.5, 10);
+      // Note: 1234.55 has floating point precision issues, so we test with 1234.551 instead
+      expect(roundToNearest(1234.551, 0.1)).toBeCloseTo(1234.6, 10);
+      expect(roundToNearest(1234.549, 0.1)).toBeCloseTo(1234.5, 10);
+    });
+
+    it("should handle negative numbers", () => {
+      expect(roundToNearest(-1234.56, 10)).toBe(-1230);
+      expect(roundToNearest(-1237, 5)).toBe(-1235);
+      expect(roundToNearest(-1234.21, 0.5)).toBe(-1234.0);
+      expect(roundToNearest(-1234.26, 0.5)).toBe(-1234.5);
+    });
+
+    it("should handle zero", () => {
+      expect(roundToNearest(0, 10)).toBe(0);
+      expect(roundToNearest(0, 0.5)).toBe(0);
+      expect(roundToNearest(0, 100)).toBe(0);
+    });
+
+    it("should handle exact multiples", () => {
+      expect(roundToNearest(1230, 10)).toBe(1230);
+      expect(roundToNearest(1234.5, 0.5)).toBe(1234.5);
+      expect(roundToNearest(1200, 100)).toBe(1200);
+    });
+
+    it("should handle string inputs", () => {
+      expect(roundToNearest("1234.56", 10)).toBe(1230);
+      expect(roundToNearest("1237", 5)).toBe(1235);
+      expect(roundToNearest("1234.21", 0.25)).toBe(1234.25);
+    });
+
+    it("should return 0 for invalid value inputs", () => {
+      expect(roundToNearest(null, 10)).toBe(0);
+      expect(roundToNearest(undefined, 10)).toBe(0);
+      expect(roundToNearest("invalid", 10)).toBe(0);
+      expect(roundToNearest(Infinity, 10)).toBe(0);
+      expect(roundToNearest(-Infinity, 10)).toBe(0);
+    });
+
+    it("should return 0 for invalid divisor", () => {
+      expect(roundToNearest(1234, 0)).toBe(0);
+      expect(roundToNearest(1234, -10)).toBe(0);
+      expect(roundToNearest(1234, NaN)).toBe(0);
+      expect(roundToNearest(1234, Infinity)).toBe(0);
+      expect(roundToNearest(1234, -Infinity)).toBe(0);
+    });
+
+    it("should handle edge cases with small divisors", () => {
+      expect(roundToNearest(1234.567, 0.01)).toBeCloseTo(1234.57, 10);
+      expect(roundToNearest(1234.561, 0.01)).toBeCloseTo(1234.56, 10);
+      expect(roundToNearest(1234.565, 0.01)).toBeCloseTo(1234.57, 10);
+    });
+
+    it("should handle large divisors", () => {
+      expect(roundToNearest(1234567, 10000)).toBe(1230000);
+      expect(roundToNearest(1234567, 100000)).toBe(1200000);
     });
   });
 
