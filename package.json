@@ -1,6 +1,6 @@
 {
   "name": "@jasonbyrne/dry-types",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Reusable utility functions for type conversions and checks",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
