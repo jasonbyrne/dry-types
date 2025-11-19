@@ -1,5 +1,6 @@
 import { toString } from "./string";
 import { isNullOrUndefined, isNumber, isInteger } from "./is";
+import { NumberConstraint, SignDisplay } from "./generics";
 
 /**
  * Number manipulation and conversion utilities
@@ -11,70 +12,46 @@ import { isNullOrUndefined, isNumber, isInteger } from "./is";
  * - Number range generation
  */
 
-export interface NumberFormatOptions {
+export interface NumberStringOptions {
   /**
    * Locale to use for formatting (e.g., "en-US", "de-DE", "fr-FR")
-   * When provided, uses Intl.NumberFormat for locale-aware formatting
    * @default "en-US"
    */
   locale?: Intl.LocalesArgument;
 
   /**
-   * Thousands separator character
-   * If not provided, will be determined from locale or default to ","
-   * @default ","
-   */
-  thousandSeparator?: string;
-
-  /**
-   * Decimal separator character
-   * If not provided, will be determined from locale or default to "."
-   * @default "."
-   */
-  decimalSeparator?: string;
-
-  /**
    * Maximum number of decimal places to display
-   * @default undefined (no limit, but will remove trailing zeros if minDecimalPlaces is not set)
+   * Maps to Intl.NumberFormat's maximumFractionDigits
    */
   maxDecimalPlaces?: number;
 
   /**
    * Minimum number of decimal places to display (pads with zeros)
+   * Maps to Intl.NumberFormat's minimumFractionDigits
    * @default 0
    */
   minDecimalPlaces?: number;
 
   /**
-   * Whether to allow negative numbers
-   * If false, negative numbers will return empty string
-   * @default true
+   * Constraint on which values are allowed
+   * @default "all"
    */
-  allowNegative?: boolean;
+  constraint?: NumberConstraint;
 
   /**
-   * Whether to allow positive numbers
-   * If false, positive numbers will return empty string
-   * @default true
+   * How to display signs
+   * @default "auto"
    */
-  allowPositive?: boolean;
+  signDisplay?: SignDisplay;
 
   /**
-   * Whether to allow zero
-   * If false, zero will return empty string
-   * @default true
+   * Value to return for null/undefined/invalid inputs
+   * @default ""
    */
-  allowZero?: boolean;
+  nullValue?: string;
 
   /**
-   * Use Intl.NumberFormat for locale-aware formatting
-   * When true, thousandSeparator and decimalSeparator are ignored (use locale defaults)
-   * @default false (uses manual formatting for more control)
-   */
-  useLocaleFormatting?: boolean;
-
-  /**
-   * Additional Intl.NumberFormat options (only used when useLocaleFormatting is true)
+   * Additional Intl.NumberFormat options (can include style: "currency", etc.)
    */
   intlOptions?: Intl.NumberFormatOptions;
 }
@@ -293,170 +270,115 @@ export function getNumbersBetween(
 }
 
 /**
- * Formats a number (or number-like value) into a readable string with thousands separators,
- * decimal places, and other formatting options.
+ * Checks if a number meets the specified constraint
+ */
+function meetsConstraint(num: number, constraint?: NumberConstraint): boolean {
+  if (!constraint) return true;
+  switch (constraint) {
+    case "positive-only":
+      return num > 0;
+    case "negative-only":
+      return num < 0;
+    case "non-negative":
+      return num >= 0;
+    case "non-positive":
+      return num <= 0;
+    case "non-zero":
+      return num !== 0;
+    case "zero-only":
+      return num === 0;
+    default:
+      return true;
+  }
+}
+
+/**
+ * Converts a number (or number-like value) into a formatted string using Intl.NumberFormat.
  *
  * @param value - The value to format (number, string, etc.)
  * @param opts - Formatting options
- * @returns Formatted number string, or empty string if value is invalid or doesn't meet constraints
+ * @returns Formatted number string, or nullValue/empty string if value is invalid or doesn't meet constraints
  *
  * @example
  * ```ts
  * // Basic formatting
- * formatNumber(1234.56) // "1,234.56"
- * formatNumber(1234.5, { minDecimalPlaces: 2 }) // "1,234.50"
- * formatNumber(1234.567, { maxDecimalPlaces: 2 }) // "1,234.57"
- *
- * // Custom separators
- * formatNumber(1234.56, { thousandSeparator: ".", decimalSeparator: "," }) // "1.234,56"
+ * toNumberString(1234.56) // "1,234.56"
+ * toNumberString(1234.5, { minDecimalPlaces: 2 }) // "1,234.50"
+ * toNumberString(1234.567, { maxDecimalPlaces: 2 }) // "1,234.57"
  *
  * // Locale-aware formatting
- * formatNumber(1234.56, { useLocaleFormatting: true, locale: "de-DE" }) // "1.234,56"
+ * toNumberString(1234.56, { locale: "de-DE" }) // "1.234,56"
  *
  * // Constraints
- * formatNumber(-100, { allowNegative: false }) // ""
- * formatNumber(0, { allowZero: false }) // ""
+ * toNumberString(-100, { constraint: "non-negative" }) // ""
+ * toNumberString(0, { constraint: "non-zero" }) // ""
+ *
+ * // Sign display
+ * toNumberString(100, { signDisplay: "always" }) // "+100"
+ * toNumberString(-100, { signDisplay: "parentheses" }) // "(100)"
  *
  * // Integer formatting
- * formatNumber(1234, { maxDecimalPlaces: 0 }) // "1,234"
+ * toNumberString(1234, { maxDecimalPlaces: 0 }) // "1,234"
  * ```
  */
-export function formatNumber(
+export function toNumberString(
   value: unknown,
-  opts: NumberFormatOptions = {}
+  opts: NumberStringOptions = {}
 ): string {
-  // Convert to number
+  const nullValue = opts.nullValue ?? "";
+  // Convert to number, it already handles null/undefined/NaN/Infinity
   const num = toNumber(value, null);
-  if (num === null) return "";
+  if (num === null) return nullValue;
+  if (!meetsConstraint(num, opts.constraint)) return nullValue;
 
-  // Check for NaN or Infinity
-  if (isNaN(num) || !isFinite(num)) return "";
-
-  // Apply constraints
-  const { allowNegative = true, allowPositive = true, allowZero = true } = opts;
-
-  if (!allowNegative && num < 0) return "";
-  if (!allowPositive && num > 0) return "";
-  if (!allowZero && num === 0) return "";
-
-  // Use locale formatting if requested
-  if (opts.useLocaleFormatting) {
-    return formatWithIntl(num, opts);
-  }
-
-  // Manual formatting for more control
-  return formatManually(num, opts);
-}
-
-/**
- * Formats a number using Intl.NumberFormat (locale-aware)
- */
-function formatWithIntl(num: number, opts: NumberFormatOptions): string {
-  const {
-    locale = "en-US",
-    maxDecimalPlaces,
-    minDecimalPlaces,
-    intlOptions = {},
-  } = opts;
-
-  const formatOptions: Intl.NumberFormatOptions = {
-    ...intlOptions,
-    style: intlOptions.style || "decimal",
+  // Default options
+  const locale = opts.locale ?? "en-US";
+  const signDisplay = opts.signDisplay ?? "auto";
+  // Create number format options
+  const intlOptions: Intl.NumberFormatOptions = {
+    style: "decimal",
+    useGrouping: true,
+    minimumFractionDigits: opts.minDecimalPlaces ?? 0,
+    maximumFractionDigits: opts.maxDecimalPlaces ?? 20,
+    ...opts.intlOptions,
   };
 
-  // Handle decimal places
-  if (maxDecimalPlaces !== undefined || minDecimalPlaces !== undefined) {
-    formatOptions.minimumFractionDigits = minDecimalPlaces ?? 0;
-    formatOptions.maximumFractionDigits = maxDecimalPlaces ?? 20;
+  // Handle sign display
+  if (signDisplay === "parentheses") {
+    // For parentheses, we'll format normally and post-process
+    intlOptions.signDisplay = "auto";
+  } else {
+    // Map our SignDisplay to Intl's signDisplay
+    if (
+      signDisplay === "always" ||
+      signDisplay === "exceptZero" ||
+      signDisplay === "never"
+    ) {
+      intlOptions.signDisplay = signDisplay;
+    } else {
+      // "auto" or "negative" both map to "auto"
+      intlOptions.signDisplay = "auto";
+    }
   }
 
   try {
-    return new Intl.NumberFormat(locale, formatOptions).format(num);
+    let formatted = new Intl.NumberFormat(locale, intlOptions).format(num);
+
+    // Post-process for parentheses display
+    if (signDisplay === "parentheses" && num < 0) {
+      // Check if Intl already formatted with parentheses (e.g., currencySign: "accounting")
+      // If it already starts with "(" and ends with ")", don't add another set
+      if (formatted.startsWith("(") && formatted.endsWith(")")) {
+        // Already has parentheses, do nothing
+      } else {
+        // Remove the negative sign and wrap in parentheses
+        formatted = `(${formatted.replace(/^-/, "")})`;
+      }
+    }
+
+    return formatted;
   } catch (error) {
-    // Fallback to manual formatting if locale is invalid
-    return formatManually(num, opts);
+    // Return nullValue if formatting fails
+    return nullValue;
   }
-}
-
-/**
- * Formats a number manually with custom separators
- */
-function formatManually(num: number, opts: NumberFormatOptions): string {
-  const {
-    thousandSeparator = ",",
-    decimalSeparator = ".",
-    maxDecimalPlaces,
-    minDecimalPlaces = 0,
-  } = opts;
-
-  // Handle rounding and decimal places
-  // Use toFixed for better precision when maxDecimalPlaces is specified
-  let roundedNum = num;
-  let numStr: string;
-
-  if (maxDecimalPlaces !== undefined) {
-    roundedNum = round(num, maxDecimalPlaces);
-    // Use toFixed to ensure proper decimal representation
-    numStr = Math.abs(roundedNum).toFixed(maxDecimalPlaces);
-  } else {
-    numStr = Math.abs(roundedNum).toString();
-  }
-
-  // Split into integer and decimal parts
-  const isNegative = roundedNum < 0;
-  const parts = numStr.split(".");
-  let integerPart = parts[0] || "0";
-  let decimalPart = parts[1] || "";
-
-  // Remove trailing zeros if we used toFixed (unless minDecimalPlaces requires them)
-  if (maxDecimalPlaces !== undefined && minDecimalPlaces === 0) {
-    decimalPart = decimalPart.replace(/0+$/, "");
-  }
-
-  // Apply min decimal places (pad with zeros)
-  if (minDecimalPlaces > 0) {
-    if (decimalPart.length < minDecimalPlaces) {
-      decimalPart = decimalPart.padEnd(minDecimalPlaces, "0");
-    }
-  } else if (maxDecimalPlaces === undefined) {
-    // Remove trailing zeros if no minDecimalPlaces and no maxDecimalPlaces
-    decimalPart = decimalPart.replace(/0+$/, "");
-  }
-
-  // Add thousands separators to integer part
-  integerPart = addThousandsSeparator(integerPart, thousandSeparator);
-
-  // Combine parts
-  let result = integerPart;
-  if (decimalPart || minDecimalPlaces > 0) {
-    result += decimalSeparator + decimalPart;
-  }
-
-  // Add negative sign
-  if (isNegative) {
-    result = "-" + result;
-  }
-
-  return result;
-}
-
-/**
- * Adds thousands separators to an integer string
- */
-function addThousandsSeparator(integerPart: string, separator: string): string {
-  // Handle negative sign separately
-  const isNegative = integerPart.startsWith("-");
-  const digits = isNegative ? integerPart.slice(1) : integerPart;
-
-  // Add separators from right to left
-  let result = "";
-  for (let i = digits.length - 1; i >= 0; i--) {
-    const pos = digits.length - 1 - i;
-    if (pos > 0 && pos % 3 === 0) {
-      result = separator + result;
-    }
-    result = digits[i] + result;
-  }
-
-  return isNegative ? "-" + result : result;
 }

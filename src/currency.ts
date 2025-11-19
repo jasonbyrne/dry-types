@@ -1,83 +1,120 @@
-import { formatNumber, NumberFormatOptions } from "./number";
+import { toNumber, toNumberString, NumberStringOptions } from "./number";
+import { NumberConstraint, SignDisplay } from "./generics";
 
+/**
+ * Currency formatting options
+ */
 export interface CurrencyFormatOptions {
   /**
-   * Locale to use for formatting (e.g., "en-US", "de-DE", "fr-FR")
-   * @default "en-US"
+   * Grain/format type for currency display
+   * - "cents": Always show cents, min 2 decimals (e.g., "$1,234.00")
+   * - "cents-optional": Show cents only if non-zero, min 2 decimals when shown (e.g., "$1,234", "$1,234.56")
+   * - "whole": Round to nearest whole unit, no cents (e.g., "$1,235")
+   * - "compact": Automatically group to K/M/B based on value magnitude with auto decimals
+   * @default "cents"
    */
-  locale?: string;
+  grain?: "cents" | "cents-optional" | "whole" | "compact";
 
   /**
-   * Currency code to use (e.g., "USD", "EUR", "GBP")
+   * Currency code (e.g., "USD", "EUR", "GBP")
+   * Affects symbol only, formatting stays US-style
    * @default "USD"
    */
   currency?: string;
 
   /**
-   * Whether to allow negative values
-   * @default true
+   * Constraint on which values are allowed
+   * @default "all"
    */
-  allowNegative?: boolean;
+  constraint?: NumberConstraint;
 
   /**
-   * Maximum number of decimal places to display
-   * @default 2 (standard for most currencies)
+   * How to display signs
+   * @default "auto"
+   */
+  signDisplay?: SignDisplay;
+
+  /**
+   * Value to return for null/undefined inputs
+   * @default "--"
+   */
+  nullValue?: string;
+
+  /**
+   * Maximum number of decimal places for cents
+   * @default 2
    */
   maxDecimalPlaces?: number;
 
   /**
-   * Minimum number of decimal places to display (pads with zeros)
-   * @default 2 (standard for most currencies)
+   * Locale to use for formatting (e.g., "en-US", "de-DE", "fr-FR")
+   * @default "en-US"
    */
-  minDecimalPlaces?: number;
+  locale?: Intl.LocalesArgument;
+
+  /**
+   * Additional Intl.NumberFormat options
+   */
+  intlOptions?: Intl.NumberFormatOptions;
 }
 
-/**
- * Converts a value to a currency-formatted string using formatNumber internally
- * @param value - The value to convert to currency format
- * @param defaultValue - The default value to return if conversion fails (default: "")
- * @param opts - Formatting options
- * @returns A currency-formatted string, or the default value if conversion fails or negative values are not allowed
- * @example
- * ```ts
- * toCurrency(1234.56) // "$1,234.56"
- * toCurrency(1234.56, "", { currency: "EUR", locale: "de-DE" }) // "1.234,56 €"
- * toCurrency(-100, "", { allowNegative: false }) // ""
- * toCurrency(1234.5, "", { minDecimalPlaces: 2 }) // "$1,234.50"
- * ```
- */
-export function toCurrency<T extends string | null | undefined>(
+export function toCurrency(
   value: unknown,
-  defaultValue: T = "" as T,
   opts: CurrencyFormatOptions = {}
-): T | string {
-  const {
-    locale = "en-US",
-    currency = "USD",
-    allowNegative = true,
-    maxDecimalPlaces = 2,
-    minDecimalPlaces = 2,
-  } = opts;
+): string {
+  // Initialize defaults
+  const grain = opts.grain || "cents";
+  const locale: Intl.LocalesArgument = opts.locale || "en-US";
+  const currency = opts.currency || "USD";
+  const signDisplay = opts.signDisplay ?? "auto";
 
-  // Use formatNumber with currency-specific options
-  const formatOpts: NumberFormatOptions = {
-    useLocaleFormatting: true,
+  // Pre-processing: convert to number
+  let num = toNumber(value, null);
+  if (num === null) return opts.nullValue ?? "--";
+
+  // Round if needed
+  if (!["cents", "cents-optional"].includes(grain)) {
+    num = Math.round(num);
+  }
+
+  // Calculate decimal places based on grain
+  let minimumFractionDigits = 0;
+  let maximumFractionDigits = 2;
+  const hasCents = num % 1 !== 0;
+  if (grain === "cents") {
+    minimumFractionDigits = 2;
+    maximumFractionDigits = opts.maxDecimalPlaces || 2;
+  } else if (grain === "cents-optional") {
+    minimumFractionDigits = hasCents ? 2 : 0;
+    maximumFractionDigits = hasCents ? opts.maxDecimalPlaces || 2 : 0;
+  }
+
+  // Map currency options to toNumberString options
+  const numberStringOpts: NumberStringOptions = {
     locale,
-    allowNegative,
-    maxDecimalPlaces,
-    minDecimalPlaces,
+    minDecimalPlaces: minimumFractionDigits,
+    maxDecimalPlaces: maximumFractionDigits,
+    constraint: opts.constraint,
+    signDisplay,
+    nullValue: opts.nullValue ?? "--",
     intlOptions: {
       style: "currency",
       currency,
+      notation: grain === "compact" ? "compact" : "standard",
+      useGrouping: true,
+      currencyDisplay: "symbol",
+      currencySign: signDisplay === "parentheses" ? "accounting" : "standard",
+      ...opts.intlOptions,
     },
   };
 
-  const formatted = formatNumber(value, formatOpts);
+  // Call toNumberString
+  let formatted = toNumberString(num, numberStringOpts);
 
-  // Return default value if formatting resulted in empty string (invalid value or constraint violation)
-  // Note: If formatted is empty string and defaultValue is also empty string, return empty string
-  if (formatted === "") {
-    return defaultValue;
+  // Handle edge case of invalid currency (e.g. "XYZ 0.00"), change to $
+  if (/^[A-Z]+\s/.test(formatted)) {
+    // Strip the currency code and replace with $
+    formatted = formatted.replace(/^[A-Z]+\s/, "$");
   }
 
   return formatted;

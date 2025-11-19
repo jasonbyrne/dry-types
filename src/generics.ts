@@ -164,3 +164,25 @@ export type AsyncReturnType<T extends (...args: any) => Promise<any>> = Awaited<
 export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
+
+/**
+ * Constraint type for number formatting - determines which values are allowed
+ */
+export type NumberConstraint =
+  | "positive-only" // Only positive numbers (> 0)
+  | "negative-only" // Only negative numbers (< 0)
+  | "non-negative" // Zero and positive (>= 0)
+  | "non-positive" // Zero and negative (<= 0)
+  | "non-zero" // All except zero
+  | "zero-only"; // Only zero
+
+/**
+ * Sign display type for number formatting - determines how signs are displayed
+ */
+export type SignDisplay =
+  | "auto" // Default: show - for negatives only
+  | "always" // Always show sign: + for positives, - for negatives
+  | "exceptZero" // Show sign except for zero
+  | "negative" // Only show - for negatives (same as auto)
+  | "never" // Never show sign
+  | "parentheses"; // Use parentheses for negatives: (100), no sign for positives

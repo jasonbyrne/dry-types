@@ -161,7 +161,8 @@ Functions that transform or convert a value from one type/format to another. Ret
 
 - `toBoolean(value: unknown): boolean` - Converts a value to a boolean
 - `toLength(value: unknown): number` - Gets the length of a value (strings, arrays, objects, numbers)
-- `toCurrency(value: unknown, defaultValue?: string, opts?: { locale?: string; currency?: string; allowNegative?: boolean }): string` - Converts a value to a currency-formatted string
+- `toNumberString(value: unknown, opts?: NumberStringOptions): string` - Converts a value to a formatted number string using Intl.NumberFormat
+- `toCurrency(value: unknown, opts?: CurrencyFormatOptions): string` - Converts a value to a currency-formatted string
 - `toJSON(value: unknown, defaultValue?: string | null): string | null` - Safely stringify a value to JSON
 - `fromJSON<T>(value: unknown, defaultValue: T): T` - Safely parse a JSON string
 
@@ -300,6 +301,8 @@ The library also exports useful TypeScript utility types:
 - `DeepWritable<T>` - Makes all properties recursively writable
 - `WithRequired<T, K>` - Make K in T required
 - `RequireOnly<T, K>` - Make everything in T optional, except for the keys in K
+- `NumberConstraint` - Constraint type for number formatting: `"positive-only" | "negative-only" | "non-negative" | "non-positive" | "non-zero" | "zero-only"`
+- `SignDisplay` - Sign display type: `"auto" | "always" | "exceptZero" | "negative" | "never" | "parentheses"`
 
 #### Regex Types (from `regex.ts`)
 
@@ -314,11 +317,12 @@ The library also exports useful TypeScript utility types:
 
 #### Number Types (from `number.ts`)
 
-- `NumberFormatOptions` - Options for number formatting
+- `NumberStringOptions` - Options for number string formatting (locale, decimal places, constraint, signDisplay, nullValue, intlOptions)
 
 #### Currency Types (from `currency.ts`)
 
-- `CurrencyFormatOptions` - Options for currency formatting
+- `CurrencyFormatOptions` - Options for currency formatting (grain, currency, constraint, signDisplay, nullValue, maxDecimalPlaces, locale, intlOptions)
+
 
 #### Password Types (from `password.ts`)
 
