@@ -1,4 +1,4 @@
-import { isObject, isPlainObject } from "./is";
+import { isObject, isPlainObject, isArray } from "./is";
 
 /**
  * Object manipulation and conversion utilities
@@ -114,4 +114,45 @@ export function toValuesArray(obj: unknown): unknown[] {
     return [];
   }
   return Object.values(obj);
+}
+
+/**
+ * Strips undefined values from an object, array, or nested structures
+ * Recursively processes nested objects and arrays, removing undefined values
+ * @param obj - The object, array, or value to strip undefined values from
+ * @returns A new object/array with undefined values removed recursively
+ * @example
+ * ```ts
+ * stripUndefined({ a: 1, b: undefined, c: { d: 2, e: undefined } })
+ * // { a: 1, c: { d: 2 } }
+ * stripUndefined([1, undefined, 2, { a: 3, b: undefined }])
+ * // [1, 2, { a: 3 }]
+ * ```
+ */
+export function stripUndefined<T>(obj: T): T {
+  // Handle null or undefined
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  // Handle arrays - recursively process and filter out undefined
+  if (isArray(obj)) {
+    return obj
+      .map((item) => stripUndefined(item))
+      .filter((item) => item !== undefined) as T;
+  }
+
+  // Handle plain objects - recursively process values
+  if (isPlainObject(obj)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        result[key] = stripUndefined(value);
+      }
+    }
+    return result as T;
+  }
+
+  // For other types (primitives, Date, RegExp, etc.), return as-is
+  return obj;
 }

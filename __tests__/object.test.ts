@@ -4,6 +4,7 @@ import {
   getProperty,
   toKeysArray,
   toValuesArray,
+  stripUndefined,
 } from "../src/object.js";
 import {
   isObject,
@@ -262,6 +263,156 @@ describe("object", () => {
       const obj = Object.create({ inherited: "value" });
       obj.own = "value";
       expect(toValuesArray(obj)).toEqual(["value"]);
+    });
+  });
+
+  describe("stripUndefined", () => {
+    it("should remove undefined values from a plain object", () => {
+      const obj = { a: 1, b: undefined, c: 2 };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({ a: 1, c: 2 });
+      expect(result).not.toHaveProperty("b");
+    });
+
+    it("should handle empty objects", () => {
+      expect(stripUndefined({})).toEqual({});
+    });
+
+    it("should handle objects with all undefined values", () => {
+      const obj = { a: undefined, b: undefined };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({});
+    });
+
+    it("should recursively strip undefined from nested objects", () => {
+      const obj = {
+        a: 1,
+        b: undefined,
+        c: {
+          d: 2,
+          e: undefined,
+          f: {
+            g: 3,
+            h: undefined,
+          },
+        },
+      };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({
+        a: 1,
+        c: {
+          d: 2,
+          f: {
+            g: 3,
+          },
+        },
+      });
+    });
+
+    it("should handle arrays by filtering out undefined values", () => {
+      const arr = [1, undefined, 2, undefined, 3];
+      const result = stripUndefined(arr);
+      expect(result).toEqual([1, 2, 3]);
+    });
+
+    it("should recursively process nested arrays", () => {
+      const arr = [1, undefined, [2, undefined, 3], undefined, 4];
+      const result = stripUndefined(arr);
+      expect(result).toEqual([1, [2, 3], 4]);
+    });
+
+    it("should handle arrays with nested objects", () => {
+      const arr = [
+        { a: 1, b: undefined },
+        { c: 2, d: undefined, e: { f: 3, g: undefined } },
+        undefined,
+      ];
+      const result = stripUndefined(arr);
+      expect(result).toEqual([
+        { a: 1 },
+        { c: 2, e: { f: 3 } },
+      ]);
+    });
+
+    it("should handle objects containing arrays", () => {
+      const obj = {
+        a: [1, undefined, 2],
+        b: undefined,
+        c: {
+          d: [3, undefined, { e: 4, f: undefined }],
+        },
+      };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({
+        a: [1, 2],
+        c: {
+          d: [3, { e: 4 }],
+        },
+      });
+    });
+
+    it("should handle mixed nested structures", () => {
+      const obj = {
+        a: 1,
+        b: [2, undefined, { c: 3, d: undefined }],
+        e: {
+          f: [4, undefined, 5],
+          g: undefined,
+          h: { i: 6, j: undefined },
+        },
+      };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({
+        a: 1,
+        b: [2, { c: 3 }],
+        e: {
+          f: [4, 5],
+          h: { i: 6 },
+        },
+      });
+    });
+
+    it("should preserve null values", () => {
+      const obj = { a: 1, b: null, c: undefined };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({ a: 1, b: null });
+    });
+
+    it("should preserve other falsy values", () => {
+      const obj = {
+        a: 0,
+        b: false,
+        c: "",
+        d: undefined,
+      };
+      const result = stripUndefined(obj);
+      expect(result).toEqual({
+        a: 0,
+        b: false,
+        c: "",
+      });
+    });
+
+    it("should handle primitives", () => {
+      expect(stripUndefined(123)).toBe(123);
+      expect(stripUndefined("string")).toBe("string");
+      expect(stripUndefined(true)).toBe(true);
+      expect(stripUndefined(null)).toBe(null);
+    });
+
+    it("should handle Date objects", () => {
+      const date = new Date();
+      expect(stripUndefined(date)).toBe(date);
+    });
+
+    it("should handle empty arrays", () => {
+      expect(stripUndefined([])).toEqual([]);
+    });
+
+    it("should handle arrays with all undefined values", () => {
+      const arr = [undefined, undefined, undefined];
+      const result = stripUndefined(arr);
+      expect(result).toEqual([]);
     });
   });
 });
