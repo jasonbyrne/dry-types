@@ -11,6 +11,8 @@ import * as random from "./random";
 import * as hash from "./hash";
 import * as enumModule from "./enum";
 import * as password from "./password";
+import * as address from "./address";
+import * as phone from "./phone";
 
 // Export all types
 export * from "./generics";
@@ -30,6 +32,8 @@ export * from "./random";
 export * from "./hash";
 export * from "./enum";
 export * from "./password";
+export * from "./address";
+export * from "./phone";
 
 // Default export for convenience
 const dry = {
@@ -46,6 +50,8 @@ const dry = {
   ...hash,
   ...enumModule,
   ...password,
+  ...address,
+  ...phone,
 };
 
 export default dry;

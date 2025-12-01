@@ -25,6 +25,7 @@ import {
   escapeHtml,
   unescapeHtml,
   escapeRegex,
+  pluralize,
 } from "../src/string.js";
 import {
   isString,
@@ -737,6 +738,81 @@ describe("string", () => {
 
     it("should handle empty strings", () => {
       expect(escapeRegex("")).toBe("");
+    });
+  });
+
+  describe("pluralize", () => {
+    it("should return singular form for count of 1", () => {
+      expect(pluralize(1, "cat")).toBe("1 cat");
+      expect(pluralize(1, "dog")).toBe("1 dog");
+      expect(pluralize(1, "item")).toBe("1 item");
+    });
+
+    it("should return plural form for count not equal to 1", () => {
+      expect(pluralize(0, "cat")).toBe("0 cats");
+      expect(pluralize(2, "cat")).toBe("2 cats");
+      expect(pluralize(5, "dog")).toBe("5 dogs");
+      expect(pluralize(10, "item")).toBe("10 items");
+    });
+
+    it("should handle negative numbers", () => {
+      expect(pluralize(-1, "cat")).toBe("-1 cat");
+      expect(pluralize(-2, "cat")).toBe("-2 cats");
+    });
+
+    it("should use custom plural form when provided", () => {
+      expect(pluralize(1, "mouse", "mice")).toBe("1 mouse");
+      expect(pluralize(2, "mouse", "mice")).toBe("2 mice");
+      expect(pluralize(0, "mouse", "mice")).toBe("0 mice");
+      expect(pluralize(1, "child", "children")).toBe("1 child");
+      expect(pluralize(3, "child", "children")).toBe("3 children");
+    });
+
+    it("should automatically pluralize words ending in s, x, z", () => {
+      expect(pluralize(2, "box")).toBe("2 boxes");
+      expect(pluralize(2, "bus")).toBe("2 buses");
+      expect(pluralize(2, "buzz")).toBe("2 buzzes");
+    });
+
+    it("should automatically pluralize words ending in ch, sh", () => {
+      expect(pluralize(2, "church")).toBe("2 churches");
+      expect(pluralize(2, "dish")).toBe("2 dishes");
+      expect(pluralize(2, "brush")).toBe("2 brushes");
+    });
+
+    it("should automatically pluralize words ending in y preceded by consonant", () => {
+      expect(pluralize(2, "city")).toBe("2 cities");
+      expect(pluralize(2, "baby")).toBe("2 babies");
+      expect(pluralize(2, "country")).toBe("2 countries");
+    });
+
+    it("should automatically pluralize words ending in y preceded by vowel", () => {
+      expect(pluralize(2, "day")).toBe("2 days");
+      expect(pluralize(2, "toy")).toBe("2 toys");
+      expect(pluralize(2, "key")).toBe("2 keys");
+    });
+
+    it("should automatically pluralize words ending in f", () => {
+      expect(pluralize(2, "leaf")).toBe("2 leaves");
+      expect(pluralize(2, "wolf")).toBe("2 wolves");
+    });
+
+    it("should automatically pluralize words ending in fe", () => {
+      expect(pluralize(2, "knife")).toBe("2 knives");
+      expect(pluralize(2, "life")).toBe("2 lives");
+    });
+
+    it("should default to adding 's' for regular nouns", () => {
+      expect(pluralize(2, "cat")).toBe("2 cats");
+      expect(pluralize(2, "dog")).toBe("2 dogs");
+      expect(pluralize(2, "book")).toBe("2 books");
+    });
+
+    it("should handle edge cases", () => {
+      expect(pluralize(1, "")).toBe("1 ");
+      expect(pluralize(2, "")).toBe("2 ");
+      expect(pluralize(1, "a")).toBe("1 a");
+      expect(pluralize(2, "a")).toBe("2 as");
     });
   });
 

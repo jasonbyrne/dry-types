@@ -447,3 +447,72 @@ export function padCenter(
   const rightPad = padLength - leftPad;
   return padChar.repeat(leftPad) + s + padChar.repeat(rightPad);
 }
+
+/**
+ * Returns a string with a number and the singular or plural form of a noun
+ * @param count - The number to include in the result
+ * @param singular - The singular form of the noun
+ * @param plural - Optional plural form. If not provided, will attempt to pluralize automatically
+ * @returns A string in the format "{count} {noun}" with the correct singular/plural form
+ * @example
+ * pluralize(1, "cat") // "1 cat"
+ * pluralize(2, "cat") // "2 cats"
+ * pluralize(0, "cat") // "0 cats"
+ * pluralize(1, "mouse", "mice") // "1 mouse"
+ * pluralize(2, "mouse", "mice") // "2 mice"
+ */
+export function pluralize(
+  count: number,
+  singular: string,
+  plural?: string
+): string {
+  const noun =
+    Math.abs(count) === 1 ? singular : plural ?? pluralizeNoun(singular);
+  return `${count} ${noun}`;
+}
+
+/**
+ * Attempts to pluralize a noun using common English rules
+ * @param singular - The singular form of the noun
+ * @returns The plural form of the noun
+ */
+function pluralizeNoun(singular: string): string {
+  if (!singular) return singular;
+
+  const lower = singular.toLowerCase();
+  const lastChar = lower[lower.length - 1];
+  const lastTwoChars = lower.slice(-2);
+
+  // Words ending in s, x, z, ch, sh -> add "es"
+  if (
+    lastChar === "s" ||
+    lastChar === "x" ||
+    lastChar === "z" ||
+    lastTwoChars === "ch" ||
+    lastTwoChars === "sh"
+  ) {
+    return singular + "es";
+  }
+
+  // Words ending in "y" preceded by a consonant -> change "y" to "ies"
+  if (lastChar === "y" && lower.length > 1) {
+    const secondLastChar = lower[lower.length - 2];
+    const isVowel = /[aeiou]/.test(secondLastChar);
+    if (!isVowel) {
+      return singular.slice(0, -1) + "ies";
+    }
+  }
+
+  // Words ending in "f" -> change to "ves" (common cases)
+  if (lastChar === "f") {
+    return singular.slice(0, -1) + "ves";
+  }
+
+  // Words ending in "fe" -> change to "ves"
+  if (lastTwoChars === "fe") {
+    return singular.slice(0, -2) + "ves";
+  }
+
+  // Default: add "s"
+  return singular + "s";
+}

@@ -1,6 +1,6 @@
 {
   "name": "@jasonbyrne/dry-types",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Reusable utility functions for type conversions and checks",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -13,6 +13,11 @@
       "import": "./dist/index.esm.js",
       "require": "./dist/index.js",
       "default": "./dist/index.esm.js"
+    },
+    "./address": {
+      "types": "./dist/address.d.ts",
+      "import": "./dist/address.esm.js",
+      "default": "./dist/address.esm.js"
     },
     "./array": {
       "types": "./dist/array.d.ts",
@@ -58,6 +63,11 @@
       "types": "./dist/password.d.ts",
       "import": "./dist/password.esm.js",
       "default": "./dist/password.esm.js"
+    },
+    "./phone": {
+      "types": "./dist/phone.d.ts",
+      "import": "./dist/phone.esm.js",
+      "default": "./dist/phone.esm.js"
     },
     "./random": {
       "types": "./dist/random.d.ts",

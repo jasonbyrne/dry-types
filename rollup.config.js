@@ -32,6 +32,7 @@ export default [
   {
     input: [
       'src/index.ts',
+      'src/address.ts',
       'src/array.ts',
       'src/currency.ts',
       'src/date/index.ts',
@@ -41,6 +42,7 @@ export default [
       'src/number.ts',
       'src/object.ts',
       'src/password.ts',
+      'src/phone.ts',
       'src/random.ts',
       'src/regex.ts',
       'src/string.ts',

@@ -4,7 +4,8 @@
 
 export const DATE_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
 export const TIME_REGEX = /^(\d{2}):(\d{2}):(\d{2})$/;
-export const DATE_TIME_REGEX = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/;
+export const DATE_TIME_REGEX =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/;
 
 export interface DateTimeFormatOptions extends Intl.DateTimeFormatOptions {
   locale?: Intl.LocalesArgument;
@@ -39,6 +40,13 @@ export interface RelativeTimeOptions {
    * Minimum unit to use (default: 'second')
    */
   minUnit?: "second" | "minute" | "hour" | "day" | "week" | "month" | "year";
+  /**
+   * Format variant (default: 'standard')
+   * - 'standard': Full format (e.g., "5 days ago", "2 hours ago")
+   * - 'short': Abbreviated format with direction (e.g., "5D ago", "13H ago", "2M ago", "15m ago", "10s ago")
+   * - 'abbreviation': Abbreviated format without direction (e.g., "5D", "13H", "2M", "15m", "10s")
+   */
+  variant?: "standard" | "short" | "abbreviation";
 }
 
 /**
@@ -85,4 +93,3 @@ export function isValidTimeString(timeStr: string): boolean {
     seconds <= 59
   );
 }
-

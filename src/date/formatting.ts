@@ -1,12 +1,18 @@
 /**
  * Date formatting utilities
- * 
+ *
  * Functions for formatting dates into human-readable strings
  */
 
 import { toDate } from "./conversion";
-import { RelativeTimeOptions } from "./constants";
+import {
+  RelativeTimeOptions,
+  DATE_REGEX,
+  isValidDateString,
+} from "./constants";
 import { getMonthsBetween, getYearsBetween } from "./operations";
+import { toString } from "../string";
+import { isNullOrUndefined } from "../is";
 
 /**
  * Gets a human-readable relative time string (e.g., "2 years ago", "3 minutes ago", "just now", "1 hour from now")
@@ -24,6 +30,8 @@ import { getMonthsBetween, getYearsBetween } from "./operations";
  * getRelativeTime(new Date(Date.now() - 5000)) // "just now"
  * getRelativeTime(date, { threshold: 5 }) // Custom threshold for "just now"
  * getRelativeTime(date, { round: false }) // Use floor instead of rounding
+ * getRelativeTime(date, { variant: "short" }) // "5D ago", "13H ago", "2M ago", "15m ago", "10s ago"
+ * getRelativeTime(date, { variant: "abbreviation" }) // "5D", "13H", "2M", "15m", "10s"
  * ```
  */
 export function getRelativeTime(
@@ -39,6 +47,7 @@ export function getRelativeTime(
     round = true,
     maxUnit = "year",
     minUnit = "second",
+    variant = "standard",
   } = options;
 
   const refDate =
@@ -151,9 +160,216 @@ export function getRelativeTime(
   // Ensure value is at least 1
   value = Math.max(1, value);
 
-  const unitLabel = value === 1 ? selectedUnit.name : selectedUnit.plural;
   const direction = isFuture ? "from now" : "ago";
 
+  if (variant === "short" || variant === "abbreviation") {
+    // Abbreviated format mapping
+    const abbreviations: Record<string, string> = {
+      second: "s",
+      minute: "m",
+      hour: "H",
+      day: "D",
+      week: "W",
+      month: "M",
+      year: "Y",
+    };
+    const unitKey = selectedUnit.key;
+    const abbreviation =
+      unitKey && abbreviations[unitKey]
+        ? abbreviations[unitKey]
+        : unitKey
+        ? unitKey[0].toUpperCase()
+        : "?";
+
+    if (variant === "abbreviation") {
+      return `${value}${abbreviation}`;
+    }
+
+    return `${value}${abbreviation} ${direction}`;
+  }
+
+  // Standard format
+  const unitLabel = value === 1 ? selectedUnit.name : selectedUnit.plural;
   return `${value} ${unitLabel} ${direction}`;
 }
 
+/**
+ * Formats a date value to a specified format string, avoiding timezone conversions.
+ * This function handles date-only formatting and ensures dates are not shifted due to timezone issues.
+ *
+ * Supports format patterns:
+ * - YYYY: 4-digit year
+ * - YY: 2-digit year
+ * - MM: 2-digit month (01-12)
+ * - M: Month without leading zero (1-12)
+ * - DD: 2-digit day (01-31)
+ * - D: Day without leading zero (1-31)
+ *
+ * Common format examples:
+ * - "YYYY-MM-DD": 2024-01-15
+ * - "M/d/y": 1/15/24
+ * - "M/d/YYYY": 1/15/2024
+ * - "DD/MM/YYYY": 15/01/2024
+ *
+ * @param value - Date value to format (string in YYYY-MM-DD format, Date object, number timestamp, or year-only string/number)
+ * @param format - Output format string (default: "YYYY-MM-DD")
+ * @param defaultValue - Default value to return if conversion fails (default: null)
+ * @returns Formatted date string, or the default value if conversion fails
+ *
+ * @example
+ * ```ts
+ * formatDate("2024-01-15", "M/d/y") // "1/15/24"
+ * formatDate("2024-01-15", "YYYY-MM-DD") // "2024-01-15"
+ * formatDate("2024", "M/d/YYYY") // "1/1/2024" (year-only becomes Jan 1st)
+ * formatDate(2024, "YYYY-MM-DD") // "2024-01-01" (year-only becomes Jan 1st)
+ * formatDate(new Date(2024, 0, 15), "M/d/y") // "1/15/24"
+ * ```
+ */
+export function formatDate<T extends string | null | undefined>(
+  value: unknown,
+  format: string = "YYYY-MM-DD",
+  defaultValue: T = null as T
+): string | T {
+  if (isNullOrUndefined(value)) return defaultValue;
+
+  let year: number;
+  let month: number;
+  let day: number;
+
+  // Handle year-only input (string or number)
+  if (typeof value === "number" && value >= 1000 && value <= 9999) {
+    // Treat 4-digit numbers as years
+    year = value;
+    month = 1;
+    day = 1;
+  } else if (typeof value === "string") {
+    const str = value.trim();
+
+    // Check if it's just a year (4 digits)
+    if (/^\d{4}$/.test(str)) {
+      year = parseInt(str, 10);
+      month = 1;
+      day = 1;
+    } else if (DATE_REGEX.test(str)) {
+      // Handle YYYY-MM-DD format
+      if (!isValidDateString(str)) {
+        return defaultValue;
+      }
+      const match = str.match(DATE_REGEX);
+      if (!match) return defaultValue;
+      year = parseInt(match[1], 10);
+      month = parseInt(match[2], 10);
+      day = parseInt(match[3], 10);
+    } else {
+      // Try to parse as Date object, but extract local date components
+      const date = toDate(value, null);
+      if (date === null) return defaultValue;
+      // Use local date methods to avoid timezone issues
+      year = date.getFullYear();
+      month = date.getMonth() + 1; // getMonth() returns 0-11
+      day = date.getDate();
+    }
+  } else if (value instanceof Date) {
+    // Use local date methods to avoid timezone issues
+    if (isNaN(value.getTime())) return defaultValue;
+    year = value.getFullYear();
+    month = value.getMonth() + 1; // getMonth() returns 0-11
+    day = value.getDate();
+  } else {
+    // Try to convert to Date and extract local components
+    const date = toDate(value, null);
+    if (date === null) return defaultValue;
+    year = date.getFullYear();
+    month = date.getMonth() + 1;
+    day = date.getDate();
+  }
+
+  // Validate the date components
+  if (
+    year < 1 ||
+    year > 9999 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return defaultValue;
+  }
+
+  // Create a local date to validate it's a real date
+  const localDate = new Date(year, month - 1, day);
+  if (
+    localDate.getFullYear() !== year ||
+    localDate.getMonth() !== month - 1 ||
+    localDate.getDate() !== day
+  ) {
+    return defaultValue;
+  }
+
+  // Format the date according to the format string
+  // Process from longest patterns to shortest to avoid partial matches
+  // Support both uppercase and lowercase format patterns
+  let result = format;
+
+  const year4 = year.toString().padStart(4, "0");
+  const year2 = (year % 100).toString().padStart(2, "0");
+  const month2 = month.toString().padStart(2, "0");
+  const month1 = month.toString();
+  const day2 = day.toString().padStart(2, "0");
+  const day1 = day.toString();
+
+  // Replace YYYY/yyyy with 4-digit year (must be before YY/yy)
+  result = result.replace(/YYYY/gi, year4);
+
+  // Replace MM/mm with 2-digit month (must be before M/m)
+  result = result.replace(/MM/gi, month2);
+
+  // Replace DD/dd with 2-digit day (must be before D/d)
+  result = result.replace(/DD/gi, day2);
+
+  // Replace YY/yy with 2-digit year (after YYYY/yyyy to avoid conflicts)
+  result = result.replace(/YY/gi, year2);
+
+  // Process character by character to handle single M/m, D/d, and Y/y correctly
+  let output = "";
+  let i = 0;
+  while (i < result.length) {
+    const char = result[i];
+    const prevChar = i > 0 ? result[i - 1] : "";
+    const nextChar = i < result.length - 1 ? result[i + 1] : "";
+
+    // Handle single M or m (not part of MM/mm)
+    if (
+      (char === "M" || char === "m") &&
+      prevChar.toLowerCase() !== "m" &&
+      nextChar.toLowerCase() !== "m"
+    ) {
+      output += month1;
+      i++;
+    }
+    // Handle single D or d (not part of DD/dd)
+    else if (
+      (char === "D" || char === "d") &&
+      prevChar.toLowerCase() !== "d" &&
+      nextChar.toLowerCase() !== "d"
+    ) {
+      output += day1;
+      i++;
+    }
+    // Handle single Y or y (not part of YY/yy or YYYY/yyyy)
+    else if (
+      (char === "Y" || char === "y") &&
+      prevChar.toLowerCase() !== "y" &&
+      nextChar.toLowerCase() !== "y"
+    ) {
+      // Single Y/y should be treated as 2-digit year
+      output += year2;
+      i++;
+    } else {
+      output += char;
+      i++;
+    }
+  }
+
+  return output;
+}
