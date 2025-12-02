@@ -1472,24 +1472,6 @@ describe("date", () => {
       expect(getRelativeTime(past, { round: false })).toBe("1 minute ago");
     });
 
-    it("should respect maxUnit option", () => {
-      const now = new Date();
-        const past = addYears(-2, now);
-      if (past) {
-        const result = getRelativeTime(past, { maxUnit: "month" });
-        expect(result).toMatch(/month/);
-        expect(result).not.toMatch(/year/);
-      }
-    });
-
-    it("should respect minUnit option", () => {
-      const now = new Date();
-      const past = new Date(now.getTime() - 30 * 1000); // 30 seconds ago
-      const result = getRelativeTime(past, { minUnit: "minute" });
-      expect(result).toMatch(/minute/);
-      expect(result).not.toMatch(/second/);
-    });
-
     it("should use custom reference date", () => {
       const refDate = new Date("2024-01-01");
       const date = new Date("2024-01-06"); // 5 days later

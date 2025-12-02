@@ -49,8 +49,6 @@ export function getRelativeTime(
     referenceDate,
     threshold = 10,
     round = true,
-    maxUnit = "year",
-    minUnit = "second",
     variant = "standard",
     unitLabels,
   } = options;
@@ -97,7 +95,7 @@ export function getRelativeTime(
     name: string;
     plural: string;
     seconds: number;
-    key: RelativeTimeOptions["maxUnit"];
+    key: "second" | "minute" | "hour" | "day" | "week" | "month" | "year";
   }> = [
     { name: "second", plural: "seconds", seconds: 1, key: "second" },
     { name: "minute", plural: "minutes", seconds: 60, key: "minute" },
@@ -108,21 +106,13 @@ export function getRelativeTime(
     { name: "year", plural: "years", seconds: 31536000, key: "year" }, // ~365 days
   ];
 
-  // Filter units based on min/max
-  const maxUnitIndex = units.findIndex((u) => u.key === maxUnit);
-  const minUnitIndex = units.findIndex((u) => u.key === minUnit);
-  const availableUnits = units.slice(
-    Math.max(0, minUnitIndex),
-    maxUnitIndex >= 0 ? maxUnitIndex + 1 : units.length
-  );
-
   // Find the most appropriate unit
   let selectedUnit: (typeof units)[0] | null = null;
   let value = 0;
 
   // Check if we should use years or months (more accurate than seconds-based calculation)
-  const canUseYear = availableUnits.some((u) => u.key === "year");
-  const canUseMonth = availableUnits.some((u) => u.key === "month");
+  const canUseYear = true;
+  const canUseMonth = true;
 
   // Try years and months first (more accurate) - but only if time difference is large enough
   // Only use months/years if the difference is at least ~20 days (to avoid using months for small differences)
@@ -141,7 +131,7 @@ export function getRelativeTime(
           // Use years if we have at least 1 year, or if rounding would make it 1 year
           if (absYears > 0 || (round && remainingMonths >= 6)) {
             const yearUnit = units.find((u) => u.key === "year");
-            if (yearUnit && availableUnits.some((u) => u.key === "year")) {
+            if (yearUnit) {
               selectedUnit = yearUnit;
               value = round && remainingMonths >= 6 ? absYears + 1 : absYears;
               value = Math.max(1, value);
@@ -153,7 +143,7 @@ export function getRelativeTime(
       // Use months if we haven't selected a unit yet and months are available
       if (!selectedUnit && canUseMonth && absMonths > 0) {
         const monthUnit = units.find((u) => u.key === "month");
-        if (monthUnit && availableUnits.some((u) => u.key === "month")) {
+        if (monthUnit) {
           selectedUnit = monthUnit;
           value = round ? Math.round(absMonths) : absMonths;
         }
@@ -163,9 +153,9 @@ export function getRelativeTime(
 
   // If we haven't selected a unit yet, use seconds-based calculation for smaller units
   if (!selectedUnit) {
-    // Iterate from largest to smallest available unit
-    for (let i = availableUnits.length - 1; i >= 0; i--) {
-      const unit = availableUnits[i];
+    // Iterate from largest to smallest unit
+    for (let i = units.length - 1; i >= 0; i--) {
+      const unit = units[i];
       // Skip months and years as we already handled them
       if (unit.key === "month" || unit.key === "year") continue;
 
@@ -178,9 +168,9 @@ export function getRelativeTime(
     }
   }
 
-  // Fallback to smallest available unit if nothing was selected
+  // Fallback to smallest unit if nothing was selected
   if (!selectedUnit) {
-    selectedUnit = availableUnits[0];
+    selectedUnit = units[0];
     value = absDiffSeconds;
   }
 

@@ -33,14 +33,6 @@ export interface RelativeTimeOptions {
    */
   round?: boolean;
   /**
-   * Maximum unit to use (default: 'year')
-   */
-  maxUnit?: "second" | "minute" | "hour" | "day" | "week" | "month" | "year";
-  /**
-   * Minimum unit to use (default: 'second')
-   */
-  minUnit?: "second" | "minute" | "hour" | "day" | "week" | "month" | "year";
-  /**
    * Format variant (default: 'standard')
    * - 'standard': Full format (e.g., "5 days ago", "2 hours ago")
    * - 'short': Abbreviated format with direction (e.g., "5D ago", "13H ago", "2M ago", "15m ago", "10s ago")
