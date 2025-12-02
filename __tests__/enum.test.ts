@@ -127,7 +127,7 @@ describe("createTypedEnum", () => {
       expect(CONTACT_TAG.getLabel("volunteer")).toBe("Volunteer");
     });
 
-    it("should return the value as string if label is not defined", () => {
+    it("should return the label (or key) if value exists but label is not defined", () => {
       const STATUS = createTypedEnum({
         active: {},
       });
@@ -135,14 +135,14 @@ describe("createTypedEnum", () => {
       expect(STATUS.getLabel("active")).toBe("active");
     });
 
-    it("should return the value as string for invalid values", () => {
+    it("should return undefined for invalid values", () => {
       const CONTACT_TAG = createTypedEnum({
         donor: {
           label: "Donor",
         },
       });
 
-      expect(CONTACT_TAG.getLabel("invalid")).toBe("invalid");
+      expect(CONTACT_TAG.getLabel("invalid")).toBeUndefined();
     });
 
     it("should work with numeric values", () => {
@@ -171,16 +171,14 @@ describe("createTypedEnum", () => {
       expect(CONTACT_TAG.getValue("Volunteer")).toBe("volunteer");
     });
 
-    it("should throw an error for an invalid label", () => {
+    it("should return undefined for an invalid label", () => {
       const CONTACT_TAG = createTypedEnum({
         donor: {
           label: "Donor",
         },
       });
 
-      expect(() => CONTACT_TAG.getValue("Invalid Label")).toThrow(
-        "No enum value found for label: Invalid Label"
-      );
+      expect(CONTACT_TAG.getValue("Invalid Label")).toBeUndefined();
     });
 
     it("should work with numeric values", () => {

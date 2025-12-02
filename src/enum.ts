@@ -72,13 +72,16 @@ type EnumEntries<T extends EnumDefinition> = {
 /**
  * Untyped enum mapper interface (for internal use).
  */
-export interface UntypedEnumMapper {
+interface UntypedEnumMapper {
   readonly values: Readonly<Record<string, string>>;
   readonly options: readonly EnumEntryOutput[];
   readonly enumMap: Readonly<Record<string, EnumEntryOutput>>;
-  getLabel(value: string | number): string;
-  getValue(label: string): string | number;
+  getLabel(value: string | number): string | undefined;
+  getValue(label: string): string | number | undefined;
   isValueValid(value: string | number): boolean;
+  findByLabel(label: string): EnumEntryOutput | undefined;
+  findByValue(value: string | number): EnumEntryOutput | undefined;
+  find(search: string | number): EnumEntryOutput | undefined;
 }
 
 /**
@@ -119,7 +122,13 @@ export interface UntypedEnumMapper {
 export interface TypedEnum<T extends EnumDefinition>
   extends Omit<
     UntypedEnumMapper,
-    "values" | "options" | "enumMap" | "isValueValid"
+    | "values"
+    | "options"
+    | "enumMap"
+    | "isValueValid"
+    | "findByLabel"
+    | "findByValue"
+    | "find"
   > {
   /** Object mapping enum keys to their literal key values for type-safe access */
   readonly values: EnumValues<T>;
@@ -128,6 +137,24 @@ export interface TypedEnum<T extends EnumDefinition>
   /** Map of enum keys to their full entry objects */
   readonly enumMap: EnumEntries<T>;
   /**
+   * Finds an enum entry by its label.
+   * @param label - The label to search for
+   * @returns The full enum entry object, or undefined if not found
+   */
+  findByLabel(label: string): EnumEntry<T, keyof T> | undefined;
+  /**
+   * Finds an enum entry by its value.
+   * @param value - The value to search for
+   * @returns The full enum entry object, or undefined if not found
+   */
+  findByValue(value: string | number): EnumEntry<T, keyof T> | undefined;
+  /**
+   * Finds an enum entry by label or value.
+   * @param search - The label or value to search for
+   * @returns The full enum entry object, or undefined if not found
+   */
+  find(search: string | number): EnumEntry<T, keyof T> | undefined;
+  /**
    * Converts the enum to an array of [value, label] tuples.
    * @returns Array of tuples where each tuple is [value, label]
    */
@@ -135,16 +162,15 @@ export interface TypedEnum<T extends EnumDefinition>
   /**
    * Gets the label for a given enum value.
    * @param value - The enum value to get the label for
-   * @returns The label, or the value as a string if no label is defined
+   * @returns The label if the value exists, or undefined if the value is not found
    */
-  getLabel(value: string | number): string;
+  getLabel(value: string | number): string | undefined;
   /**
    * Gets the enum value for a given label.
    * @param label - The label to find the value for
-   * @returns The enum value
-   * @throws Error if no enum value is found for the given label
+   * @returns The enum value if the label exists, or undefined if the label is not found
    */
-  getValue(label: string): string | number;
+  getValue(label: string): string | number | undefined;
   /**
    * Type guard to check if a value is a valid enum key.
    * @param value - The value to check
@@ -280,6 +306,25 @@ export function createTypedEnum<T extends EnumDefinition>(
     }
   }
 
+  const findByLabel = (label: string): EnumEntry<T, keyof T> | undefined => {
+    const found = Object.entries(enumMapResult).find(
+      ([_, entry]) => entry.label === label
+    );
+    return found ? (found[1] as EnumEntry<T, keyof T>) : undefined;
+  };
+
+  const findByValue = (
+    value: string | number
+  ): EnumEntry<T, keyof T> | undefined => {
+    return enumMapResult[value as keyof T] ?? undefined;
+  };
+
+  const isValueValid = (
+    value: string | number
+  ): value is Extract<keyof T, string | number> => {
+    return value in enumMap;
+  };
+
   return {
     values: values as EnumValues<T>,
     options: options as EnumOptions<T>,
@@ -290,22 +335,20 @@ export function createTypedEnum<T extends EnumDefinition>(
         entry.label ?? String(key),
       ]);
     },
-    getLabel: (value: string | number): string => {
-      return enumMap[value as keyof T]?.label ?? String(value);
+    getLabel: (value: string | number): string | undefined => {
+      return findByValue(value)?.label ?? undefined;
     },
-    getValue: (label: string): string | number => {
-      const found = Object.entries(enumMap).find(
-        ([_, entry]) => entry.label === label
-      );
-      if (!found) {
-        throw new Error(`No enum value found for label: ${label}`);
-      }
-      return normalizeKey(found[0], enumMap);
+    getValue: (label: string): string | number | undefined => {
+      const found = findByLabel(label);
+      if (found === undefined) return undefined;
+      // Enum values are always string | number per EnumDefinition interface
+      return found.value as string | number;
     },
-    isValueValid: (
-      value: string | number
-    ): value is Extract<keyof T, string | number> => {
-      return value in enumMap;
+    isValueValid,
+    findByLabel,
+    findByValue,
+    find: (search: string | number): EnumEntry<T, keyof T> | undefined => {
+      return findByLabel(search as string) ?? findByValue(search);
     },
   } as const;
 }

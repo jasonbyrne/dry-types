@@ -47,6 +47,17 @@ export interface RelativeTimeOptions {
    * - 'abbreviation': Abbreviated format without direction (e.g., "5D", "13H", "2M", "15m", "10s")
    */
   variant?: "standard" | "short" | "abbreviation";
+  /**
+   * Map of unit keys to their labels
+   * Can provide singular/plural array or single string (auto-pluralized)
+   * For abbreviation variants, single string is used directly
+   */
+  unitLabels?: Partial<
+    Record<
+      "second" | "minute" | "hour" | "day" | "week" | "month" | "year",
+      [singular: string, plural: string] | string
+    >
+  >;
 }
 
 /**

@@ -2,6 +2,7 @@ import {
   toDate,
   toEpochMsTimestamp,
   toEpochSecondsTimestamp,
+  parseDuration,
   toISODateString,
   toLocaleDateString,
   toLocaleTimeString,
@@ -34,6 +35,7 @@ import {
   addHours,
   addMinutes,
   addSeconds,
+  addToDate,
   isToday,
   getDaysBetween,
   getMonthsBetween,
@@ -44,6 +46,7 @@ import {
   getMonth,
   getDayOfWeek,
   formatDate,
+  formatDuration,
 } from "../src/date/index.js";
 import {
   isDate,
@@ -130,6 +133,23 @@ describe("date", () => {
       expect(result).toBeInstanceOf(Date);
     });
 
+    it("should detect and convert unix timestamps in seconds (10 digits)", () => {
+      // Unix timestamp in seconds for 2024-01-15
+      const secondsTimestamp = 1705276800;
+      const result = toDate(secondsTimestamp);
+      expect(result).toBeInstanceOf(Date);
+      // Should be converted to milliseconds and match the expected date
+      expect(result?.getTime()).toBe(1705276800000);
+    });
+
+    it("should handle unix timestamps in milliseconds (13 digits)", () => {
+      // Unix timestamp in milliseconds for 2024-01-15
+      const millisecondsTimestamp = 1705276800000;
+      const result = toDate(millisecondsTimestamp);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(1705276800000);
+    });
+
     it("should return default for null/undefined", () => {
       expect(toDate(null)).toBe(null);
       // toDate with undefined returns null (default parameter)
@@ -159,6 +179,226 @@ describe("date", () => {
       const result = toEpochSecondsTimestamp(date);
       expect(typeof result).toBe("number");
       expect(result).toBe(Math.floor(date.getTime() / 1000));
+    });
+  });
+
+  describe("parseDuration", () => {
+    it("should parse days (D)", () => {
+      expect(parseDuration("1D")).toEqual({
+        milliseconds: 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "D",
+      });
+      expect(parseDuration("5D")).toEqual({
+        milliseconds: 5 * 24 * 60 * 60 * 1000,
+        value: 5,
+        unit: "D",
+      });
+      expect(parseDuration("D")).toEqual({
+        milliseconds: 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "D",
+      }); // Default to 1
+    });
+
+    it("should parse years (Y) as relative unit", () => {
+      expect(parseDuration("1Y")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 1,
+        unit: "Y",
+      });
+      expect(parseDuration("5Y")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 5,
+        unit: "Y",
+      });
+      expect(parseDuration("Y")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 1,
+        unit: "Y",
+      });
+    });
+
+    it("should parse hours (h or H)", () => {
+      expect(parseDuration("1h")).toEqual({
+        milliseconds: 60 * 60 * 1000,
+        value: 1,
+        unit: "h",
+      });
+      expect(parseDuration("2H")).toEqual({
+        milliseconds: 2 * 60 * 60 * 1000,
+        value: 2,
+        unit: "h",
+      });
+      expect(parseDuration("h")).toEqual({
+        milliseconds: 60 * 60 * 1000,
+        value: 1,
+        unit: "h",
+      });
+    });
+
+    it("should parse minutes (lowercase m)", () => {
+      expect(parseDuration("1m")).toEqual({
+        milliseconds: 60 * 1000,
+        value: 1,
+        unit: "m",
+      });
+      expect(parseDuration("5m")).toEqual({
+        milliseconds: 5 * 60 * 1000,
+        value: 5,
+        unit: "m",
+      });
+      expect(parseDuration("m")).toEqual({
+        milliseconds: 60 * 1000,
+        value: 1,
+        unit: "m",
+      });
+    });
+
+    it("should parse months (uppercase M) as relative unit", () => {
+      expect(parseDuration("1M")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 1,
+        unit: "M",
+      });
+      expect(parseDuration("M")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 1,
+        unit: "M",
+      });
+    });
+
+    it("should parse seconds (s or S)", () => {
+      expect(parseDuration("1s")).toEqual({
+        milliseconds: 1000,
+        value: 1,
+        unit: "s",
+      });
+      expect(parseDuration("30S")).toEqual({
+        milliseconds: 30 * 1000,
+        value: 30,
+        unit: "s",
+      });
+      expect(parseDuration("s")).toEqual({
+        milliseconds: 1000,
+        value: 1,
+        unit: "s",
+      });
+    });
+
+    it("should parse weeks (w or W)", () => {
+      expect(parseDuration("1w")).toEqual({
+        milliseconds: 7 * 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "W",
+      });
+      expect(parseDuration("2W")).toEqual({
+        milliseconds: 2 * 7 * 24 * 60 * 60 * 1000,
+        value: 2,
+        unit: "W",
+      });
+      expect(parseDuration("W")).toEqual({
+        milliseconds: 7 * 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "W",
+      });
+    });
+
+    it("should handle positive sign (+)", () => {
+      expect(parseDuration("+1D")).toEqual({
+        milliseconds: 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "D",
+      });
+      expect(parseDuration("+5Y")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 5,
+        unit: "Y",
+      });
+    });
+
+    it("should handle negative sign (-)", () => {
+      expect(parseDuration("-1D")).toEqual({
+        milliseconds: -24 * 60 * 60 * 1000,
+        value: -1,
+        unit: "D",
+      });
+      expect(parseDuration("-2h")).toEqual({
+        milliseconds: -2 * 60 * 60 * 1000,
+        value: -2,
+        unit: "h",
+      });
+      expect(parseDuration("-M")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: -1,
+        unit: "M",
+      });
+    });
+
+    it("should handle decimal values", () => {
+      expect(parseDuration("1.5D")).toEqual({
+        milliseconds: 1.5 * 24 * 60 * 60 * 1000,
+        value: 1.5,
+        unit: "D",
+      });
+      expect(parseDuration("0.5h")).toEqual({
+        milliseconds: 0.5 * 60 * 60 * 1000,
+        value: 0.5,
+        unit: "h",
+      });
+      expect(parseDuration(".5m")).toEqual({
+        milliseconds: 0.5 * 60 * 1000,
+        value: 0.5,
+        unit: "m",
+      });
+    });
+
+    it("should handle number input as milliseconds", () => {
+      expect(parseDuration(86400000)).toEqual({
+        milliseconds: 86400000,
+        value: 86400000,
+        unit: "ms",
+      });
+    });
+
+    it("should handle object input", () => {
+      expect(parseDuration({ value: 1, unit: "D" })).toEqual({
+        milliseconds: 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "D",
+      });
+      expect(parseDuration({ value: 2, unit: "M" })).toEqual({
+        milliseconds: 0, // Relative unit
+        value: 2,
+        unit: "M",
+      });
+    });
+
+    it("should return null for invalid input", () => {
+      expect(parseDuration("")).toBe(null);
+      expect(parseDuration("invalid")).toBe(null);
+      expect(parseDuration("1")).toBe(null); // No unit
+      expect(parseDuration("X")).toBe(null); // Invalid unit
+      expect(parseDuration(null as any)).toBe(null);
+      expect(parseDuration(undefined as any)).toBe(null);
+    });
+
+    it("should handle whitespace", () => {
+      expect(parseDuration(" 1D ")).toEqual({
+        milliseconds: 24 * 60 * 60 * 1000,
+        value: 1,
+        unit: "D",
+      });
+      expect(parseDuration(" +2h ")).toEqual({
+        milliseconds: 2 * 60 * 60 * 1000,
+        value: 2,
+        unit: "h",
+      });
+      expect(parseDuration(" -M ")).toEqual({
+        milliseconds: 0, // Relative unit
+        value: -1,
+        unit: "M",
+      });
     });
   });
 
@@ -579,13 +819,20 @@ describe("date", () => {
 
   describe("addDays", () => {
     it("should add days to date", () => {
-      expect(addDays(10, "2024-01-15")).toBe("2024-01-25");
-      expect(addDays(-5, "2024-01-15")).toBe("2024-01-10");
+      const result1 = addDays(10, "2024-01-15");
+      expect(result1).toBeInstanceOf(Date);
+      expect(result1?.toISOString().split("T")[0]).toBe("2024-01-25");
+      
+      const result2 = addDays(-5, "2024-01-15");
+      expect(result2).toBeInstanceOf(Date);
+      expect(result2?.toISOString().split("T")[0]).toBe("2024-01-10");
     });
 
     it("should use current date if not provided", () => {
       const result = addDays(0);
-      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(result).toBeInstanceOf(Date);
+      const dateStr = result?.toISOString().split("T")[0];
+      expect(dateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
   });
 
@@ -705,35 +952,61 @@ describe("date", () => {
   });
 
   describe("addMonths", () => {
-    it("should add months to date", () => {
-      const result = addMonths("2024-01-15", 2);
+    it("should add months to date using calendar months", () => {
+      const result = addMonths(2, "2024-01-15");
       expect(result).toBeInstanceOf(Date);
       expect(result?.getMonth()).toBe(2); // March (0-indexed)
       expect(result?.getFullYear()).toBe(2024);
     });
 
+    it("should handle February correctly (Feb 1 -> Mar 1)", () => {
+      const result = addMonths(1, "2024-02-01");
+      expect(result).toBeInstanceOf(Date);
+      const resultStr = result?.toISOString().split("T")[0];
+      expect(resultStr).toBe("2024-03-01");
+    });
+
+    it("should handle month-end dates correctly", () => {
+      // Jan 31 + 1 month = Feb 31 doesn't exist, so JavaScript adjusts
+      // The behavior depends on timezone, but JavaScript's Date constructor
+      // will adjust invalid dates (e.g., Feb 31 -> Feb 29 in leap year, or March 2/3)
+      const result = addMonths(1, "2024-01-31");
+      expect(result).toBeInstanceOf(Date);
+      // The result should be a valid date in February or early March
+      // In 2024 (leap year), Feb has 29 days
+      const month = result?.getMonth();
+      expect([1, 2]).toContain(month); // February (1) or March (2)
+      if (month === 1) {
+        // If it's February, it should be Feb 29 (last day of month)
+        expect(result?.getDate()).toBe(29);
+      } else {
+        // If it overflowed to March, it should be March 1 or 2
+        expect([1, 2, 3]).toContain(result?.getDate());
+      }
+    });
+
     it("should subtract months when negative", () => {
-      const result = addMonths("2024-03-15", -1);
+      const result = addMonths(-1, "2024-03-15");
       expect(result).toBeInstanceOf(Date);
       expect(result?.getMonth()).toBe(1); // February (0-indexed)
     });
 
     it("should handle year rollover", () => {
-      const result = addMonths("2024-11-15", 2);
+      const result = addMonths(2, "2024-11-15");
       expect(result).toBeInstanceOf(Date);
       expect(result?.getMonth()).toBe(0); // January (0-indexed)
       expect(result?.getFullYear()).toBe(2025);
     });
 
     it("should return null for invalid date", () => {
-      expect(addMonths(null, 1)).toBe(null);
-      expect(addMonths("invalid", 1)).toBe(null);
+      expect(addMonths(1, null)).toBe(null);
+      expect(addMonths(1, "invalid")).toBe(null);
     });
   });
 
   describe("addYears", () => {
-    it("should add years to date", () => {
-      const result = addYears("2024-01-15", 1);
+    it("should add years to date using calendar years", () => {
+      const result = addYears(1, "2024-01-15");
       expect(result).toBeInstanceOf(Date);
       expect(result?.getFullYear()).toBe(2025);
       expect(result?.getMonth()).toBe(0);
@@ -742,99 +1015,243 @@ describe("date", () => {
       expect(resultStr).toBe("2025-01-15");
     });
 
+    it("should handle February correctly (Feb 1 -> Mar 1)", () => {
+      const result = addYears(1, "2024-02-01");
+      expect(result).toBeInstanceOf(Date);
+      const resultStr = result?.toISOString().split("T")[0];
+      expect(resultStr).toBe("2025-02-01");
+    });
+
     it("should subtract years when negative", () => {
-      const result = addYears("2024-01-15", -2);
+      const result = addYears(-2, "2024-01-15");
       expect(result).toBeInstanceOf(Date);
       expect(result?.getFullYear()).toBe(2022);
     });
 
     it("should return null for invalid date", () => {
-      expect(addYears(null, 1)).toBe(null);
-      expect(addYears("invalid", 1)).toBe(null);
+      expect(addYears(1, null)).toBe(null);
+      expect(addYears(1, "invalid")).toBe(null);
     });
   });
 
   describe("addHours", () => {
     it("should add hours to date", () => {
       const date = new Date("2024-01-15T12:00:00");
-      const result = addHours(date, 2);
+      const result = addHours(2, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getHours()).toBe(14);
     });
 
     it("should subtract hours when negative", () => {
       const date = new Date("2024-01-15T12:00:00");
-      const result = addHours(date, -1);
+      const result = addHours(-1, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getHours()).toBe(11);
     });
 
     it("should handle day rollover", () => {
       const date = new Date("2024-01-15T23:00:00");
-      const result = addHours(date, 2);
+      const result = addHours(2, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getHours()).toBe(1);
       expect(result?.getDate()).toBe(16);
     });
 
     it("should return null for invalid date", () => {
-      expect(addHours(null, 1)).toBe(null);
+      expect(addHours(1, null)).toBe(null);
     });
   });
 
   describe("addMinutes", () => {
     it("should add minutes to date", () => {
       const date = new Date("2024-01-15T12:00:00");
-      const result = addMinutes(date, 30);
+      const result = addMinutes(30, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getMinutes()).toBe(30);
     });
 
     it("should subtract minutes when negative", () => {
       const date = new Date("2024-01-15T12:30:00");
-      const result = addMinutes(date, -15);
+      const result = addMinutes(-15, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getMinutes()).toBe(15);
     });
 
     it("should handle hour rollover", () => {
       const date = new Date("2024-01-15T12:45:00");
-      const result = addMinutes(date, 30);
+      const result = addMinutes(30, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getMinutes()).toBe(15);
       expect(result?.getHours()).toBe(13);
     });
 
     it("should return null for invalid date", () => {
-      expect(addMinutes(null, 1)).toBe(null);
+      expect(addMinutes(1, null)).toBe(null);
     });
   });
 
   describe("addSeconds", () => {
     it("should add seconds to date", () => {
       const date = new Date("2024-01-15T12:00:00");
-      const result = addSeconds(date, 45);
+      const result = addSeconds(45, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getSeconds()).toBe(45);
     });
 
     it("should subtract seconds when negative", () => {
       const date = new Date("2024-01-15T12:00:30");
-      const result = addSeconds(date, -15);
+      const result = addSeconds(-15, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getSeconds()).toBe(15);
     });
 
     it("should handle minute rollover", () => {
       const date = new Date("2024-01-15T12:00:45");
-      const result = addSeconds(date, 30);
+      const result = addSeconds(30, date);
       expect(result).toBeInstanceOf(Date);
       expect(result?.getSeconds()).toBe(15);
       expect(result?.getMinutes()).toBe(1);
     });
 
     it("should return null for invalid date", () => {
-      expect(addSeconds(null, 1)).toBe(null);
+      expect(addSeconds(1, null)).toBe(null);
+    });
+  });
+
+  describe("addToDate", () => {
+    it("should add duration string to current date when no date provided", () => {
+      const now = new Date();
+      const result = addToDate("1D");
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(now.getTime() + 24 * 60 * 60 * 1000);
+    });
+
+    it("should add duration string to specified date", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      const result = addToDate("1D", baseDate);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(baseDate.getTime() + 24 * 60 * 60 * 1000);
+    });
+
+    it("should handle relative units (months) using calendar calculation", () => {
+      const result = addToDate("1M", "2024-02-01");
+      expect(result).toBeInstanceOf(Date);
+      const resultStr = result?.toISOString().split("T")[0];
+      expect(resultStr).toBe("2024-03-01");
+    });
+
+    it("should handle relative units (years) using calendar calculation", () => {
+      const result = addToDate("1Y", "2024-02-01");
+      expect(result).toBeInstanceOf(Date);
+      const resultStr = result?.toISOString().split("T")[0];
+      expect(resultStr).toBe("2025-02-01");
+    });
+
+    it("should handle relative units (quarters) using calendar calculation", () => {
+      const baseDate = new Date("2024-01-15");
+      const result = addToDate("1Q", baseDate);
+      expect(result).toBeInstanceOf(Date);
+      // 1 quarter = 3 months
+      expect(result?.getMonth()).toBe(3); // April (0-indexed)
+    });
+
+    it("should add milliseconds number to current date when no date provided", () => {
+      const now = new Date();
+      const milliseconds = 2 * 60 * 60 * 1000; // 2 hours
+      const result = addToDate(milliseconds);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(now.getTime() + milliseconds);
+    });
+
+    it("should add milliseconds number to specified date", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      const milliseconds = 30 * 60 * 1000; // 30 minutes
+      const result = addToDate(milliseconds, baseDate);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(baseDate.getTime() + milliseconds);
+    });
+
+    it("should handle negative duration strings", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      const result = addToDate("-2h", baseDate);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(baseDate.getTime() - 2 * 60 * 60 * 1000);
+    });
+
+    it("should handle positive sign in duration strings", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      const result = addToDate("+1D", baseDate);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(baseDate.getTime() + 24 * 60 * 60 * 1000);
+    });
+
+    it("should handle various duration units", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      
+      // Years (relative unit - calendar-based)
+      const yearsResult = addToDate("1Y", baseDate);
+      expect(yearsResult).toBeInstanceOf(Date);
+      expect(yearsResult?.getFullYear()).toBe(2025);
+      expect(yearsResult?.getMonth()).toBe(0); // January
+      expect(yearsResult?.getDate()).toBe(15);
+      
+      // Months (relative unit - calendar-based)
+      const monthsResult = addToDate("1M", baseDate);
+      expect(monthsResult).toBeInstanceOf(Date);
+      expect(monthsResult?.getMonth()).toBe(1); // February
+      expect(monthsResult?.getFullYear()).toBe(2024);
+      expect(monthsResult?.getDate()).toBe(15);
+      
+      // Hours (fixed unit)
+      const hoursResult = addToDate("2h", baseDate);
+      expect(hoursResult?.getTime()).toBe(baseDate.getTime() + 2 * 60 * 60 * 1000);
+      
+      // Minutes
+      const minutesResult = addToDate("30m", baseDate);
+      expect(minutesResult?.getTime()).toBe(baseDate.getTime() + 30 * 60 * 1000);
+      
+      // Seconds
+      const secondsResult = addToDate("45s", baseDate);
+      expect(secondsResult?.getTime()).toBe(baseDate.getTime() + 45 * 1000);
+    });
+
+    it("should handle unit-only strings (defaults to 1)", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      
+      const dayResult = addToDate("D", baseDate);
+      expect(dayResult?.getTime()).toBe(baseDate.getTime() + 24 * 60 * 60 * 1000);
+      
+      const minuteResult = addToDate("m", baseDate);
+      expect(minuteResult?.getTime()).toBe(baseDate.getTime() + 60 * 1000);
+    });
+
+    it("should handle decimal duration values", () => {
+      const baseDate = new Date("2024-01-15T12:00:00");
+      const result = addToDate("1.5h", baseDate);
+      expect(result).toBeInstanceOf(Date);
+      expect(result?.getTime()).toBe(baseDate.getTime() + 1.5 * 60 * 60 * 1000);
+    });
+
+    it("should return null for invalid duration string", () => {
+      expect(addToDate("invalid", new Date())).toBe(null);
+      expect(addToDate("", new Date())).toBe(null);
+    });
+
+    it("should return null for invalid date", () => {
+      expect(addToDate("1D", "invalid")).toBe(null);
+      expect(addToDate("1D", null)).toBe(null);
+    });
+
+    it("should return null for invalid duration type", () => {
+      expect(addToDate(null as any, new Date())).toBe(null);
+      expect(addToDate(undefined as any, new Date())).toBe(null);
+    });
+
+    it("should work with date strings", () => {
+      const result = addToDate("1D", "2024-01-15");
+      expect(result).toBeInstanceOf(Date);
+      const expected = new Date("2024-01-16");
+      expect(result?.toISOString().split("T")[0]).toBe("2024-01-16");
     });
   });
 
@@ -1013,7 +1430,7 @@ describe("date", () => {
 
     it("should return months ago", () => {
       const now = new Date();
-      const past = addMonths(now, -3);
+      const past = addMonths(-3, now);
       if (past) {
         const result = getRelativeTime(past);
         expect(result).toMatch(/month/);
@@ -1023,7 +1440,7 @@ describe("date", () => {
 
     it("should return years ago", () => {
       const now = new Date();
-      const past = addYears(now, -2);
+      const past = addYears(-2, now);
       if (past) {
         const result = getRelativeTime(past);
         expect(result).toMatch(/year/);
@@ -1057,7 +1474,7 @@ describe("date", () => {
 
     it("should respect maxUnit option", () => {
       const now = new Date();
-      const past = addYears(now, -2);
+        const past = addYears(-2, now);
       if (past) {
         const result = getRelativeTime(past, { maxUnit: "month" });
         expect(result).toMatch(/month/);
@@ -1100,7 +1517,7 @@ describe("date", () => {
 
     it("should handle rounding for years with months", () => {
       const now = new Date();
-      const past = addMonths(now, -18); // 1.5 years ago
+      const past = addMonths(-18, now); // 1.5 years ago
       if (past) {
         const result = getRelativeTime(past, { round: true });
         expect(result).toMatch(/year/);
@@ -1142,7 +1559,7 @@ describe("date", () => {
 
       it("should return short format for months", () => {
         const now = new Date();
-        const past = addMonths(now, -2);
+        const past = addMonths(-2, now);
         if (past) {
           const result = getRelativeTime(past, { variant: "short" });
           expect(result).toBe("2M ago");
@@ -1151,7 +1568,7 @@ describe("date", () => {
 
       it("should return short format for years", () => {
         const now = new Date();
-        const past = addYears(now, -3);
+        const past = addYears(-3, now);
         if (past) {
           const result = getRelativeTime(past, { variant: "short" });
           expect(result).toBe("3Y ago");
@@ -1208,7 +1625,7 @@ describe("date", () => {
 
       it("should return abbreviation format for months without direction", () => {
         const now = new Date();
-        const past = addMonths(now, -2);
+        const past = addMonths(-2, now);
         if (past) {
           const result = getRelativeTime(past, { variant: "abbreviation" });
           expect(result).toBe("2M");
@@ -1217,7 +1634,7 @@ describe("date", () => {
 
       it("should return abbreviation format for years without direction", () => {
         const now = new Date();
-        const past = addYears(now, -3);
+        const past = addYears(-3, now);
         if (past) {
           const result = getRelativeTime(past, { variant: "abbreviation" });
           expect(result).toBe("3Y");
@@ -1236,6 +1653,91 @@ describe("date", () => {
         expect(getRelativeTime(recent, { variant: "abbreviation" })).toBe(
           "just now"
         );
+      });
+    });
+
+    describe("unitLabels", () => {
+      it("should use custom unit labels in standard format", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 2 * 60 * 1000); // 2 minutes ago
+        expect(
+          getRelativeTime(past, {
+            unitLabels: {
+              minute: ["min", "mins"],
+            },
+          })
+        ).toBe("2 mins ago");
+      });
+
+      it("should use custom unit labels with single string (auto-pluralize)", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 1 * 60 * 1000); // 1 minute ago
+        expect(
+          getRelativeTime(past, {
+            unitLabels: {
+              minute: "min",
+            },
+          })
+        ).toBe("1 min ago");
+      });
+
+      it("should use custom abbreviations in short format", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+        expect(
+          getRelativeTime(past, {
+            variant: "short",
+            unitLabels: {
+              hour: "hr",
+            },
+          })
+        ).toBe("2hr ago");
+      });
+
+      it("should use custom abbreviations in abbreviation format", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+        expect(
+          getRelativeTime(past, {
+            variant: "abbreviation",
+            unitLabels: {
+              hour: "hr",
+            },
+          })
+        ).toBe("2hr");
+      });
+
+      it("should use custom abbreviations from array in abbreviation format", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 2 * 60 * 60 * 1000); // 2 hours ago
+        expect(
+          getRelativeTime(past, {
+            variant: "abbreviation",
+            unitLabels: {
+              hour: ["hour", "hours"],
+            },
+          })
+        ).toBe("2hour"); // Uses singular from array
+      });
+
+      it("should handle multiple custom unit labels", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
+        expect(
+          getRelativeTime(past, {
+            unitLabels: {
+              day: ["day", "days"],
+              week: ["week", "weeks"],
+              month: ["mo", "mos"],
+            },
+          })
+        ).toBe("5 days ago");
+      });
+
+      it("should use defaults when unitLabels not provided", () => {
+        const now = new Date();
+        const past = new Date(now.getTime() - 2 * 60 * 1000); // 2 minutes ago
+        expect(getRelativeTime(past)).toBe("2 minutes ago");
       });
     });
   });
@@ -1359,9 +1861,289 @@ describe("date", () => {
     });
 
     describe("timestamp input", () => {
-      it("should format timestamp to date format", () => {
+      it("should format milliseconds timestamp to date format", () => {
         const timestamp = new Date(2024, 0, 15).getTime();
         expect(formatDate(timestamp, "YYYY-MM-DD")).toBe("2024-01-15");
+      });
+
+      it("should format seconds timestamp to date format", () => {
+        // Unix timestamp in seconds (convert from same date as milliseconds test)
+        const secondsTimestamp = Math.floor(new Date(2024, 0, 15).getTime() / 1000);
+        expect(formatDate(secondsTimestamp, "YYYY-MM-DD")).toBe("2024-01-15");
+      });
+    });
+  });
+
+  describe("formatDuration", () => {
+    describe("long format (default)", () => {
+      it("should format days with pluralization", () => {
+        expect(formatDuration("1D")).toBe("1 day");
+        expect(formatDuration("2D")).toBe("2 days");
+        expect(formatDuration("5D")).toBe("5 days");
+      });
+
+      it("should format hours with pluralization", () => {
+        expect(formatDuration("1h")).toBe("1 Hour");
+        expect(formatDuration("2h")).toBe("2 Hours");
+        expect(formatDuration("24h")).toBe("24 Hours");
+      });
+
+      it("should format minutes with pluralization", () => {
+        expect(formatDuration("1m")).toBe("1 minute");
+        expect(formatDuration("30m")).toBe("30 minutes");
+        expect(formatDuration("60m")).toBe("60 minutes");
+      });
+
+      it("should format seconds with pluralization", () => {
+        expect(formatDuration("1s")).toBe("1 second");
+        expect(formatDuration("45s")).toBe("45 seconds");
+      });
+
+      it("should format weeks with pluralization", () => {
+        expect(formatDuration("1W")).toBe("1 week");
+        expect(formatDuration("2W")).toBe("2 weeks");
+      });
+
+      it("should format months with pluralization", () => {
+        expect(formatDuration("1M")).toBe("1 month");
+        expect(formatDuration("2M")).toBe("2 months");
+        expect(formatDuration("12M")).toBe("12 months");
+      });
+
+      it("should format years with pluralization", () => {
+        expect(formatDuration("1Y")).toBe("1 year");
+        expect(formatDuration("5Y")).toBe("5 years");
+      });
+
+      it("should format quarters with pluralization", () => {
+        expect(formatDuration("1Q")).toBe("1 quarter");
+        expect(formatDuration("2Q")).toBe("2 quarters");
+      });
+
+      it("should format milliseconds with pluralization", () => {
+        expect(formatDuration("1ms")).toBe("1 millisecond");
+        expect(formatDuration("1000ms")).toBe("1000 milliseconds");
+      });
+
+      it("should handle decimal values", () => {
+        expect(formatDuration("1.5D")).toBe("1.5 days");
+        expect(formatDuration("0.5h")).toBe("0.5 Hours");
+        expect(formatDuration(".5m")).toBe("0.5 minutes");
+      });
+
+      it("should handle default unit (1)", () => {
+        expect(formatDuration("D")).toBe("1 day");
+        expect(formatDuration("h")).toBe("1 Hour");
+        expect(formatDuration("m")).toBe("1 minute");
+      });
+    });
+
+    describe("short format", () => {
+      it("should format string/object input with concatenated unit, no space", () => {
+        expect(formatDuration("1D", { style: "short" })).toBe("1D");
+        expect(formatDuration("2h", { style: "short" })).toBe("2h");
+        expect(formatDuration("5m", { style: "short" })).toBe("5m");
+        expect(formatDuration("30s", { style: "short" })).toBe("30s");
+      });
+
+      it("should format number input as colon-separated time (H:MM:SS)", () => {
+        // 5 hours, 16 minutes, 3 seconds
+        expect(formatDuration(5 * 3600000 + 16 * 60000 + 3 * 1000, { style: "short" })).toBe("5:16:03");
+        // 1 hour, 1 minute, 1 second
+        expect(formatDuration(3661000, { style: "short" })).toBe("1:01:01");
+      });
+
+      it("should format number input without hours (M:SS)", () => {
+        // 5 minutes, 23.25 seconds (no hours)
+        expect(formatDuration(5 * 60000 + 23250, { style: "short" })).toBe("5:23.25");
+        // 1 minute, 30 seconds
+        expect(formatDuration(90000, { style: "short" })).toBe("1:30");
+      });
+
+      it("should format number input with only seconds", () => {
+        expect(formatDuration(3000, { style: "short" })).toBe("3");
+        expect(formatDuration(3250, { style: "short" })).toBe("3.25");
+      });
+
+      it("should format number input with days", () => {
+        // 1 day, 1 hour, 0 minutes, 3 seconds
+        expect(formatDuration(86400000 + 3600000 + 3000, { style: "short" })).toBe("1:01:00:03");
+      });
+
+      it("should format weeks in short format (string input)", () => {
+        expect(formatDuration("1W", { style: "short" })).toBe("1W");
+        expect(formatDuration("2W", { style: "short" })).toBe("2W");
+      });
+
+      it("should format months in short format (string input)", () => {
+        expect(formatDuration("1M", { style: "short" })).toBe("1M");
+        expect(formatDuration("12M", { style: "short" })).toBe("12M");
+      });
+
+      it("should format years in short format (string input)", () => {
+        expect(formatDuration("1Y", { style: "short" })).toBe("1Y");
+        expect(formatDuration("5Y", { style: "short" })).toBe("5Y");
+      });
+
+      it("should format quarters in short format (string input)", () => {
+        expect(formatDuration("1Q", { style: "short" })).toBe("1Q");
+        expect(formatDuration("2Q", { style: "short" })).toBe("2Q");
+      });
+
+      it("should format milliseconds in short format (string input)", () => {
+        expect(formatDuration("1000ms", { style: "short" })).toBe("1000ms");
+      });
+
+      it("should handle decimal values in short format (string input)", () => {
+        expect(formatDuration("1.5D", { style: "short" })).toBe("1.5D");
+        expect(formatDuration("0.5h", { style: "short" })).toBe("0.5h");
+      });
+
+      it("should handle default unit (1) in short format (string input)", () => {
+        expect(formatDuration("D", { style: "short" })).toBe("1D");
+        expect(formatDuration("h", { style: "short" })).toBe("1h");
+        expect(formatDuration("m", { style: "short" })).toBe("1m");
+      });
+    });
+
+    describe("abbreviation format", () => {
+      it("should format with concatenated unit, no space", () => {
+        expect(formatDuration("1D", { style: "abbreviation" })).toBe("1D");
+        expect(formatDuration("2h", { style: "abbreviation" })).toBe("2h");
+        expect(formatDuration("5m", { style: "abbreviation" })).toBe("5m");
+        expect(formatDuration("30s", { style: "abbreviation" })).toBe("30s");
+      });
+
+      it("should format number input as space-separated units", () => {
+        // 1 day, 2 hours, 15 minutes
+        expect(formatDuration(86400000 + 2 * 3600000 + 15 * 60000, { style: "abbreviation" })).toBe("1D 2h 15m");
+        // 1 hour, 1 minute, 1 second
+        expect(formatDuration(3661000, { style: "abbreviation" })).toBe("1h 1m 1s");
+        // 5 minutes, 23 seconds, 250 milliseconds
+        expect(formatDuration(323250, { style: "abbreviation" })).toBe("5m 23s 250ms");
+      });
+
+      it("should format weeks in abbreviation format", () => {
+        expect(formatDuration("1W", { style: "abbreviation" })).toBe("1W");
+        expect(formatDuration("2W", { style: "abbreviation" })).toBe("2W");
+      });
+
+      it("should format months in abbreviation format", () => {
+        expect(formatDuration("1M", { style: "abbreviation" })).toBe("1M");
+        expect(formatDuration("12M", { style: "abbreviation" })).toBe("12M");
+      });
+
+      it("should format years in abbreviation format", () => {
+        expect(formatDuration("1Y", { style: "abbreviation" })).toBe("1Y");
+        expect(formatDuration("5Y", { style: "abbreviation" })).toBe("5Y");
+      });
+
+      it("should format quarters in abbreviation format", () => {
+        expect(formatDuration("1Q", { style: "abbreviation" })).toBe("1Q");
+        expect(formatDuration("2Q", { style: "abbreviation" })).toBe("2Q");
+      });
+
+      it("should format milliseconds in abbreviation format", () => {
+        expect(formatDuration("1000ms", { style: "abbreviation" })).toBe("1000ms");
+      });
+
+      it("should handle decimal values in abbreviation format", () => {
+        expect(formatDuration("1.5D", { style: "abbreviation" })).toBe("1.5D");
+        expect(formatDuration("0.5h", { style: "abbreviation" })).toBe("0.5h");
+      });
+
+      it("should handle default unit (1) in abbreviation format", () => {
+        expect(formatDuration("D", { style: "abbreviation" })).toBe("1D");
+        expect(formatDuration("h", { style: "abbreviation" })).toBe("1h");
+        expect(formatDuration("m", { style: "abbreviation" })).toBe("1m");
+      });
+    });
+
+    describe("number input (milliseconds)", () => {
+      it("should format milliseconds as long format with logical units", () => {
+        // 1 day, 2 hours, 15 minutes, 3 seconds
+        expect(formatDuration(86400000 + 2 * 3600000 + 15 * 60000 + 3 * 1000)).toBe("1 day, 2 hours, 15 minutes, and 3 seconds");
+        // 1 hour, 1 minute, 3 seconds
+        expect(formatDuration(3663000)).toBe("1 hour, 1 minute, and 3 seconds");
+        // 1 day
+        expect(formatDuration(86400000)).toBe("1 day");
+        // 1 second
+        expect(formatDuration(1000)).toBe("1 second");
+        // 1 millisecond
+        expect(formatDuration(1)).toBe("1 millisecond");
+        // 0 milliseconds
+        expect(formatDuration(0)).toBe("0 milliseconds");
+      });
+
+      it("should format milliseconds as short format (colon-separated)", () => {
+        // 1 day = 24:00:00
+        expect(formatDuration(86400000, { style: "short" })).toBe("1:00:00:00");
+        // 1 hour = 1:00:00
+        expect(formatDuration(3600000, { style: "short" })).toBe("1:00:00");
+        // 1 minute = 1:00
+        expect(formatDuration(60000, { style: "short" })).toBe("1:00");
+        // 1 second = 1
+        expect(formatDuration(1000, { style: "short" })).toBe("1");
+      });
+
+      it("should format milliseconds as abbreviation format", () => {
+        // 1 day
+        expect(formatDuration(86400000, { style: "abbreviation" })).toBe("1D");
+        // 1 hour, 1 minute, 1 second
+        expect(formatDuration(3661000, { style: "abbreviation" })).toBe("1h 1m 1s");
+        // 1 second
+        expect(formatDuration(1000, { style: "abbreviation" })).toBe("1s");
+        // 1 millisecond
+        expect(formatDuration(1, { style: "abbreviation" })).toBe("1ms");
+        // 0 milliseconds
+        expect(formatDuration(0, { style: "abbreviation" })).toBe("0ms");
+      });
+    });
+
+    describe("Duration object input", () => {
+      it("should format Duration object as long format", () => {
+        expect(formatDuration({ value: 1, unit: "D" })).toBe("1 day");
+        expect(formatDuration({ value: 2, unit: "h" })).toBe("2 Hours");
+        expect(formatDuration({ value: 5, unit: "m" })).toBe("5 minutes");
+      });
+
+      it("should format Duration object as short format", () => {
+        expect(formatDuration({ value: 1, unit: "D" }, { style: "short" })).toBe("1D");
+        expect(formatDuration({ value: 2, unit: "h" }, { style: "short" })).toBe("2h");
+        expect(formatDuration({ value: 5, unit: "m" }, { style: "short" })).toBe("5m");
+      });
+
+      it("should format Duration object as abbreviation format", () => {
+        expect(formatDuration({ value: 1, unit: "D" }, { style: "abbreviation" })).toBe("1D");
+        expect(formatDuration({ value: 2, unit: "h" }, { style: "abbreviation" })).toBe("2h");
+        expect(formatDuration({ value: 5, unit: "m" }, { style: "abbreviation" })).toBe("5m");
+      });
+    });
+
+    describe("edge cases", () => {
+      it("should return null for invalid duration string", () => {
+        expect(formatDuration("invalid")).toBe(null);
+        expect(formatDuration("")).toBe(null);
+        expect(formatDuration("1")).toBe(null); // No unit
+        expect(formatDuration("X")).toBe(null); // Invalid unit
+      });
+
+      it("should handle negative values", () => {
+        expect(formatDuration("-1D")).toBe("-1 day");
+        expect(formatDuration("-2h", { style: "short" })).toBe("-2h");
+        expect(formatDuration(-3663000)).toBe("-1 hour, 1 minute, and 3 seconds");
+        expect(formatDuration(-3663000, { style: "short" })).toBe("-1:01:03");
+        expect(formatDuration(-323250, { style: "short" })).toBe("-5:23.25");
+      });
+
+      it("should handle positive sign", () => {
+        expect(formatDuration("+1D")).toBe("1 day");
+        expect(formatDuration("+2h", { style: "short" })).toBe("2h");
+      });
+
+      it("should handle zero values", () => {
+        expect(formatDuration("0D")).toBe("0 days");
+        expect(formatDuration("0h", { style: "short" })).toBe("0h");
       });
     });
   });

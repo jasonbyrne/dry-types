@@ -13,6 +13,7 @@ import * as enumModule from "./enum";
 import * as password from "./password";
 import * as address from "./address";
 import * as phone from "./phone";
+import * as url from "./url";
 
 // Export all types
 export * from "./generics";
@@ -34,6 +35,7 @@ export * from "./enum";
 export * from "./password";
 export * from "./address";
 export * from "./phone";
+export * from "./url";
 
 // Default export for convenience
 const dry = {
@@ -52,6 +54,7 @@ const dry = {
   ...password,
   ...address,
   ...phone,
+  ...url,
 };
 
 export default dry;

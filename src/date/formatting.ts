@@ -4,15 +4,19 @@
  * Functions for formatting dates into human-readable strings
  */
 
-import { toDate } from "./conversion";
+import { DURATION, Duration, parseDuration, toDate } from "./conversion";
 import {
   RelativeTimeOptions,
   DATE_REGEX,
   isValidDateString,
 } from "./constants";
 import { getMonthsBetween, getYearsBetween } from "./operations";
-import { toString } from "../string";
 import { isNullOrUndefined } from "../is";
+import { pluralize } from "../string";
+
+export interface DurationFormatOptions {
+  style?: "long" | "short" | "abbreviation";
+}
 
 /**
  * Gets a human-readable relative time string (e.g., "2 years ago", "3 minutes ago", "just now", "1 hour from now")
@@ -48,7 +52,30 @@ export function getRelativeTime(
     maxUnit = "year",
     minUnit = "second",
     variant = "standard",
+    unitLabels,
   } = options;
+
+  // Default unit labels for standard format [singular, plural]
+  const defaultStandardLabels: Record<string, [string, string]> = {
+    second: ["second", "seconds"],
+    minute: ["minute", "minutes"],
+    hour: ["hour", "hours"],
+    day: ["day", "days"],
+    week: ["week", "weeks"],
+    month: ["month", "months"],
+    year: ["year", "years"],
+  };
+
+  // Default unit labels for abbreviation format
+  const defaultAbbreviationLabels: Record<string, string> = {
+    second: "s",
+    minute: "m",
+    hour: "H",
+    day: "D",
+    week: "W",
+    month: "M",
+    year: "Y",
+  };
 
   const refDate =
     referenceDate !== undefined ? toDate(referenceDate, null) : new Date();
@@ -163,23 +190,28 @@ export function getRelativeTime(
   const direction = isFuture ? "from now" : "ago";
 
   if (variant === "short" || variant === "abbreviation") {
-    // Abbreviated format mapping
-    const abbreviations: Record<string, string> = {
-      second: "s",
-      minute: "m",
-      hour: "H",
-      day: "D",
-      week: "W",
-      month: "M",
-      year: "Y",
-    };
+    // Get abbreviation from unitLabels or use default
     const unitKey = selectedUnit.key;
-    const abbreviation =
-      unitKey && abbreviations[unitKey]
-        ? abbreviations[unitKey]
-        : unitKey
-        ? unitKey[0].toUpperCase()
-        : "?";
+    let abbreviation: string;
+
+    if (unitKey && unitLabels?.[unitKey]) {
+      // Custom label provided - could be string or [singular, plural]
+      const customLabel = unitLabels[unitKey];
+      if (typeof customLabel === "string") {
+        abbreviation = customLabel;
+      } else {
+        // If it's an array, use the singular form for abbreviation
+        abbreviation = customLabel[0];
+      }
+    } else {
+      // Use default abbreviation
+      abbreviation =
+        unitKey && defaultAbbreviationLabels[unitKey]
+          ? defaultAbbreviationLabels[unitKey]
+          : unitKey
+          ? unitKey[0].toUpperCase()
+          : "?";
+    }
 
     if (variant === "abbreviation") {
       return `${value}${abbreviation}`;
@@ -188,8 +220,37 @@ export function getRelativeTime(
     return `${value}${abbreviation} ${direction}`;
   }
 
-  // Standard format
-  const unitLabel = value === 1 ? selectedUnit.name : selectedUnit.plural;
+  // Standard format - use pluralize with custom labels or defaults
+  const unitKey = selectedUnit.key;
+  let singular: string;
+  let plural: string | undefined;
+
+  if (unitKey && unitLabels?.[unitKey]) {
+    // Custom label provided
+    const customLabel = unitLabels[unitKey];
+    if (typeof customLabel === "string") {
+      // Single string provided - use pluralize function to handle pluralization
+      singular = customLabel;
+      plural = undefined; // Let pluralize handle it
+    } else {
+      // Array [singular, plural] provided
+      [singular, plural] = customLabel;
+    }
+  } else {
+    // Use default labels
+    const defaults = unitKey ? defaultStandardLabels[unitKey] : undefined;
+    if (defaults) {
+      [singular, plural] = defaults;
+    } else {
+      // Fallback
+      singular = selectedUnit.name;
+      plural = selectedUnit.plural;
+    }
+  }
+
+  // Use pluralize function to get the correct form, then extract just the noun part
+  const pluralized = pluralize(value, singular, plural);
+  const unitLabel = pluralized.substring(pluralized.indexOf(" ") + 1); // Extract noun after the number
   return `${value} ${unitLabel} ${direction}`;
 }
 
@@ -372,4 +433,264 @@ export function formatDate<T extends string | null | undefined>(
   }
 
   return output;
+}
+
+/**
+ * Formats a duration into a human-readable string
+ * Automatically parses duration strings, numbers (milliseconds), or Duration objects
+ *
+ * When a number (milliseconds) is provided, it breaks down the duration into logical units
+ * (days, hours, minutes, seconds, milliseconds) similar to relative time calculations.
+ *
+ * @param duration - Duration to format. Can be:
+ *   - A string (e.g., "1D", "5Y", "2h", "M", "m", "+1D", "-2h")
+ *   - A number (milliseconds, e.g., 86400000 for 1 day) - will be broken down into logical units
+ *   - A Duration object with value and unit properties
+ * @param options - Formatting options
+ * @param options.style - Format style:
+ *   - "long": Full words with pluralization. For number input, formats as "1 day, 2 hours, and 15 minutes"
+ *   - "short": Colon-separated time format (H:MM:SS.MS or MM:SS.MS). Hours omitted if 0, leading 0 omitted from minutes if no hours
+ *   - "abbreviation": Value with unit concatenated, no space (e.g., "1D", "2h", "5m")
+ * @returns Formatted duration string, or null if duration is invalid
+ *
+ * @example
+ * ```ts
+ * // Long format (default) - with pluralization
+ * formatDuration("1D") // "1 day"
+ * formatDuration("2h") // "2 hours"
+ * formatDuration("5m") // "5 minutes"
+ *
+ * // Long format with number input - breaks down into logical units
+ * formatDuration(93783000) // "1 day, 2 hours, 3 minutes, and 3 seconds"
+ * formatDuration(3663000) // "1 hour, 1 minute, and 3 seconds"
+ *
+ * // Short format - colon-separated time
+ * formatDuration(18783000, { style: "short" }) // "5:13:03" (5 hours, 13 minutes, 3 seconds)
+ * formatDuration(323250, { style: "short" }) // "5:23.25" (5 minutes, 23.25 seconds, no hours)
+ * formatDuration(3000, { style: "short" }) // "3" (3 seconds, no minutes/hours)
+ *
+ * // Abbreviation format - concatenated, no space
+ * formatDuration("1D", { style: "abbreviation" }) // "1D"
+ * formatDuration("2h", { style: "abbreviation" }) // "2h"
+ * formatDuration("5m", { style: "abbreviation" }) // "5m"
+ *
+ * // Duration object input
+ * formatDuration({ value: 1, unit: "D" }) // "1 day"
+ * formatDuration({ value: 2, unit: "h" }) // "2 hours"
+ *
+ * // Decimal values
+ * formatDuration("1.5D") // "1.5 days"
+ * formatDuration("0.5h") // "0.5 hours"
+ *
+ * // Invalid input returns null
+ * formatDuration("invalid") // null
+ * formatDuration("") // null
+ * ```
+ */
+export function formatDuration(
+  milliseconds: number,
+  options?: DurationFormatOptions
+): string | null;
+export function formatDuration(
+  durationString: string,
+  options?: DurationFormatOptions
+): string | null;
+export function formatDuration(
+  durationObject: Duration,
+  options?: DurationFormatOptions
+): string | null;
+export function formatDuration(
+  duration: string | number | Duration,
+  options: DurationFormatOptions = {}
+): string | null {
+  const { style = "long" } = options;
+
+  // Special handling for number input - break down into logical units
+  if (typeof duration === "number") {
+    return formatDurationFromMilliseconds(duration, style);
+  }
+
+  // For string or Duration object input, parse and format
+  const parsed = parseDuration(duration);
+  if (parsed === null) return null;
+  const { value, unit } = parsed;
+
+  if (style === "long") {
+    // pluralize already includes the count, so just use its result
+    // unit is validated by parseDuration, so it should always have a label
+    const label = DURATION.getLabel(unit) ?? unit;
+    return pluralize(value, label);
+  }
+  if (style === "abbreviation") {
+    // Concatenated, no space
+    return `${value}${unit}`;
+  }
+  // style === "short" - for string/object input, use abbreviation format
+  return `${value}${unit}`;
+}
+
+/**
+ * Formats a duration in milliseconds into a human-readable string
+ * Breaks down the duration into logical units (days, hours, minutes, seconds, milliseconds)
+ */
+function formatDurationFromMilliseconds(
+  milliseconds: number,
+  style: "long" | "short" | "abbreviation"
+): string | null {
+  const absMs = Math.abs(milliseconds);
+  const sign = milliseconds < 0 ? "-" : "";
+
+  // Define units in milliseconds
+  const msPerSecond = 1000;
+  const msPerMinute = 60 * msPerSecond;
+  const msPerHour = 60 * msPerMinute;
+  const msPerDay = 24 * msPerHour;
+
+  if (style === "short") {
+    // Colon-separated time format: H:MM:SS.MS or MM:SS.MS
+    const totalSeconds = Math.floor(absMs / msPerSecond);
+    const ms = absMs % msPerSecond;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const totalHours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+
+    const parts: string[] = [];
+
+    if (days > 0) {
+      // If days > 0, include hours
+      if (ms > 0) {
+        const msStr = String(ms).padStart(3, "0").replace(/0+$/, "") || "0";
+        parts.push(
+          `${days}:${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+            2,
+            "0"
+          )}:${String(seconds).padStart(2, "0")}.${msStr}`
+        );
+      } else {
+        parts.push(
+          `${days}:${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+            2,
+            "0"
+          )}:${String(seconds).padStart(2, "0")}`
+        );
+      }
+    } else if (hours > 0) {
+      // Hours but no days: H:MM:SS.MS
+      if (ms > 0) {
+        const msStr = String(ms).padStart(3, "0").replace(/0+$/, "") || "0";
+        parts.push(
+          `${hours}:${String(minutes).padStart(2, "0")}:${String(
+            seconds
+          ).padStart(2, "0")}.${msStr}`
+        );
+      } else {
+        parts.push(
+          `${hours}:${String(minutes).padStart(2, "0")}:${String(
+            seconds
+          ).padStart(2, "0")}`
+        );
+      }
+    } else if (minutes > 0) {
+      // Minutes but no hours: M:SS.MS (no leading zero on minutes)
+      if (ms > 0) {
+        // Format milliseconds without trailing zeros
+        const msStr = String(ms).padStart(3, "0").replace(/0+$/, "") || "0";
+        parts.push(`${minutes}:${String(seconds).padStart(2, "0")}.${msStr}`);
+      } else {
+        parts.push(`${minutes}:${String(seconds).padStart(2, "0")}`);
+      }
+    } else {
+      // Only seconds (and possibly milliseconds)
+      if (ms > 0) {
+        // Format milliseconds without trailing zeros
+        const msStr = String(ms).padStart(3, "0").replace(/0+$/, "") || "0";
+        parts.push(`${seconds}.${msStr}`);
+      } else {
+        parts.push(String(seconds));
+      }
+    }
+
+    return sign + parts.join("");
+  }
+
+  if (style === "abbreviation") {
+    // For abbreviation with number input, find the largest unit
+    let remaining = absMs;
+    const parts: string[] = [];
+
+    if (remaining >= msPerDay) {
+      const days = Math.floor(remaining / msPerDay);
+      parts.push(`${days}D`);
+      remaining = remaining % msPerDay;
+    }
+    if (remaining >= msPerHour) {
+      const hours = Math.floor(remaining / msPerHour);
+      parts.push(`${hours}h`);
+      remaining = remaining % msPerHour;
+    }
+    if (remaining >= msPerMinute) {
+      const minutes = Math.floor(remaining / msPerMinute);
+      parts.push(`${minutes}m`);
+      remaining = remaining % msPerMinute;
+    }
+    if (remaining >= msPerSecond) {
+      const seconds = Math.floor(remaining / msPerSecond);
+      parts.push(`${seconds}s`);
+      remaining = remaining % msPerSecond;
+    }
+    if (remaining > 0) {
+      parts.push(`${remaining}ms`);
+    }
+
+    if (parts.length === 0) {
+      return "0ms";
+    }
+
+    return sign + parts.join(" ");
+  }
+
+  // style === "long" - break down into logical units with "and" before last unit
+  let remaining = absMs;
+  const parts: string[] = [];
+
+  if (remaining >= msPerDay) {
+    const days = Math.floor(remaining / msPerDay);
+    parts.push(pluralize(days, "day", "days"));
+    remaining = remaining % msPerDay;
+  }
+  if (remaining >= msPerHour) {
+    const hours = Math.floor(remaining / msPerHour);
+    parts.push(pluralize(hours, "hour", "hours"));
+    remaining = remaining % msPerHour;
+  }
+  if (remaining >= msPerMinute) {
+    const minutes = Math.floor(remaining / msPerMinute);
+    parts.push(pluralize(minutes, "minute", "minutes"));
+    remaining = remaining % msPerMinute;
+  }
+  if (remaining >= msPerSecond) {
+    const seconds = Math.floor(remaining / msPerSecond);
+    parts.push(pluralize(seconds, "second", "seconds"));
+    remaining = remaining % msPerSecond;
+  }
+  if (remaining > 0) {
+    parts.push(pluralize(remaining, "millisecond", "milliseconds"));
+  }
+
+  if (parts.length === 0) {
+    return "0 milliseconds";
+  }
+
+  // Join with commas and "and" before the last item
+  if (parts.length === 1) {
+    return sign + parts[0];
+  }
+  if (parts.length === 2) {
+    return sign + `${parts[0]} and ${parts[1]}`;
+  }
+  const lastPart = parts.pop();
+  return sign + `${parts.join(", ")}, and ${lastPart}`;
 }

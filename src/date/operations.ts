@@ -1,10 +1,10 @@
 /**
  * Date operation utilities
- * 
+ *
  * Functions for date arithmetic, comparisons, and calculations
  */
 
-import { toDate, toDateString } from "./conversion";
+import { toDate, parseDuration, Duration } from "./conversion";
 
 /**
  * Adds days to a date and returns the result as a YYYY-MM-DD string
@@ -22,127 +22,232 @@ import { toDate, toDateString } from "./conversion";
  * addDays(10) // 10 days from today
  * ```
  */
-export function addDays(days: number, date?: unknown): string {
-  const dateObj = date !== undefined ? toDate(date) : null;
-  const baseDate = dateObj ?? new Date();
-  return new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+export function addDays(days: number, date?: unknown): Date | null {
+  return addToDate(days * 24 * 60 * 60 * 1000, date);
 }
 
 /**
- * Adds months to a date
+ * Adds months to a date using calendar months
  * Automatically detects and converts unknown date types
+ * Handles month boundaries correctly (e.g., adding 1 month to Feb 1 gives Mar 1)
  *
- * @param date - Date value (string, Date, number, or unknown) to add months to
  * @param months - Number of months to add (can be negative to subtract)
+ * @param date - Optional date value (string, Date, number, or unknown) to add months to. Defaults to current date/time if not provided
  * @returns Date object with months added, or null if date is invalid
  *
  * @example
  * ```ts
- * addMonths(new Date("2024-01-15"), 2) // Date object for 2024-03-15
- * addMonths("2024-01-15", -1) // Date object for 2023-12-15
+ * addMonths(2, new Date("2024-01-15")) // Date object for 2024-03-15
+ * addMonths(-1, "2024-01-15") // Date object for 2023-12-15
+ * addMonths(1, "2024-02-01") // Date object for 2024-03-01
+ * addMonths(1) // 1 month from now
  * ```
  */
-export function addMonths(date: unknown, months: number): Date | null {
-  const dateObj = toDate(date, null);
+export function addMonths(months: number, date?: unknown): Date | null {
+  const dateObj = date !== undefined ? toDate(date, null) : new Date();
   if (dateObj === null) return null;
 
-  const result = new Date(dateObj);
-  result.setMonth(result.getMonth() + months);
-  return result;
+  // Extract date components - use UTC methods for date strings to avoid timezone issues
+  // For Date objects created from strings like "2024-02-01", use UTC to get the actual date
+  const isDateString =
+    typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date);
+  const year = isDateString ? dateObj.getUTCFullYear() : dateObj.getFullYear();
+  const month = isDateString ? dateObj.getUTCMonth() : dateObj.getMonth();
+  const day = isDateString ? dateObj.getUTCDate() : dateObj.getDate();
+  const hours = isDateString ? dateObj.getUTCHours() : dateObj.getHours();
+  const minutes = isDateString ? dateObj.getUTCMinutes() : dateObj.getMinutes();
+  const seconds = isDateString ? dateObj.getUTCSeconds() : dateObj.getSeconds();
+  const milliseconds = isDateString
+    ? dateObj.getUTCMilliseconds()
+    : dateObj.getMilliseconds();
+
+  // Create new date with adjusted month
+  // For date strings, use UTC constructor to preserve the date correctly
+  // For Date objects, use local time constructor to preserve timezone
+  if (isDateString) {
+    const result = new Date(
+      Date.UTC(year, month + months, day, hours, minutes, seconds, milliseconds)
+    );
+    return result;
+  } else {
+    const result = new Date(
+      year,
+      month + months,
+      day,
+      hours,
+      minutes,
+      seconds,
+      milliseconds
+    );
+    return result;
+  }
 }
 
 /**
- * Adds years to a date
+ * Adds years to a date using calendar years
  * Automatically detects and converts unknown date types
+ * Handles leap years correctly (e.g., adding 1 year to Feb 29, 2024 gives Feb 28, 2025)
  *
- * @param date - Date value (string, Date, number, or unknown) to add years to
  * @param years - Number of years to add (can be negative to subtract)
+ * @param date - Optional date value (string, Date, number, or unknown) to add years to. Defaults to current date/time if not provided
  * @returns Date object with years added, or null if date is invalid
  *
  * @example
  * ```ts
- * addYears(new Date("2024-01-15"), 1) // Date object for 2025-01-15
- * addYears("2024-01-15", -2) // Date object for 2022-01-15
+ * addYears(1, new Date("2024-01-15")) // Date object for 2025-01-15
+ * addYears(-2, "2024-01-15") // Date object for 2022-01-15
+ * addYears(1, "2024-02-01") // Date object for 2025-02-01
+ * addYears(1) // 1 year from now
  * ```
  */
-export function addYears(date: unknown, years: number): Date | null {
-  const dateObj = toDate(date, null);
+export function addYears(years: number, date?: unknown): Date | null {
+  const dateObj = date !== undefined ? toDate(date, null) : new Date();
   if (dateObj === null) return null;
 
-  const result = new Date(dateObj);
-  result.setFullYear(result.getFullYear() + years);
-  return result;
+  // Extract date components - use UTC methods for date strings to avoid timezone issues
+  // For Date objects created from strings like "2024-02-01", use UTC to get the actual date
+  const isDateString =
+    typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date);
+  const year = isDateString ? dateObj.getUTCFullYear() : dateObj.getFullYear();
+  const month = isDateString ? dateObj.getUTCMonth() : dateObj.getMonth();
+  const day = isDateString ? dateObj.getUTCDate() : dateObj.getDate();
+  const hours = isDateString ? dateObj.getUTCHours() : dateObj.getHours();
+  const minutes = isDateString ? dateObj.getUTCMinutes() : dateObj.getMinutes();
+  const seconds = isDateString ? dateObj.getUTCSeconds() : dateObj.getSeconds();
+  const milliseconds = isDateString
+    ? dateObj.getUTCMilliseconds()
+    : dateObj.getMilliseconds();
+
+  // Create new date with adjusted year
+  // For date strings, use UTC constructor to preserve the date correctly
+  // For Date objects, use local time constructor to preserve timezone
+  if (isDateString) {
+    const result = new Date(
+      Date.UTC(year + years, month, day, hours, minutes, seconds, milliseconds)
+    );
+    return result;
+  } else {
+    const result = new Date(
+      year + years,
+      month,
+      day,
+      hours,
+      minutes,
+      seconds,
+      milliseconds
+    );
+    return result;
+  }
 }
 
 /**
  * Adds hours to a date
  * Automatically detects and converts unknown date types
  *
- * @param date - Date value (string, Date, number, or unknown) to add hours to
  * @param hours - Number of hours to add (can be negative to subtract)
+ * @param date - Optional date value (string, Date, number, or unknown) to add hours to. Defaults to current date/time if not provided
  * @returns Date object with hours added, or null if date is invalid
  *
  * @example
  * ```ts
- * addHours(new Date("2024-01-15T12:00:00"), 2) // Date object for 2024-01-15T14:00:00
- * addHours("2024-01-15T12:00:00", -1) // Date object for 2024-01-15T11:00:00
+ * addHours(2, new Date("2024-01-15T12:00:00")) // Date object for 2024-01-15T14:00:00
+ * addHours(-1, "2024-01-15T12:00:00") // Date object for 2024-01-15T11:00:00
+ * addHours(2) // 2 hours from now
  * ```
  */
-export function addHours(date: unknown, hours: number): Date | null {
-  const dateObj = toDate(date, null);
-  if (dateObj === null) return null;
-
-  const result = new Date(dateObj);
-  result.setHours(result.getHours() + hours);
-  return result;
+export function addHours(hours: number, date?: unknown): Date | null {
+  return addToDate(hours * 60 * 60 * 1000, date);
 }
 
 /**
  * Adds minutes to a date
  * Automatically detects and converts unknown date types
  *
- * @param date - Date value (string, Date, number, or unknown) to add minutes to
  * @param minutes - Number of minutes to add (can be negative to subtract)
+ * @param date - Optional date value (string, Date, number, or unknown) to add minutes to. Defaults to current date/time if not provided
  * @returns Date object with minutes added, or null if date is invalid
  *
  * @example
  * ```ts
- * addMinutes(new Date("2024-01-15T12:00:00"), 30) // Date object for 2024-01-15T12:30:00
- * addMinutes("2024-01-15T12:00:00", -15) // Date object for 2024-01-15T11:45:00
+ * addMinutes(30, new Date("2024-01-15T12:00:00")) // Date object for 2024-01-15T12:30:00
+ * addMinutes(-15, "2024-01-15T12:00:00") // Date object for 2024-01-15T11:45:00
+ * addMinutes(30) // 30 minutes from now
  * ```
  */
-export function addMinutes(date: unknown, minutes: number): Date | null {
-  const dateObj = toDate(date, null);
-  if (dateObj === null) return null;
-
-  const result = new Date(dateObj);
-  result.setMinutes(result.getMinutes() + minutes);
-  return result;
+export function addMinutes(minutes: number, date?: unknown): Date | null {
+  return addToDate(minutes * 60 * 1000, date);
 }
 
 /**
  * Adds seconds to a date
  * Automatically detects and converts unknown date types
  *
- * @param date - Date value (string, Date, number, or unknown) to add seconds to
  * @param seconds - Number of seconds to add (can be negative to subtract)
+ * @param date - Optional date value (string, Date, number, or unknown) to add seconds to. Defaults to current date/time if not provided
  * @returns Date object with seconds added, or null if date is invalid
  *
  * @example
  * ```ts
- * addSeconds(new Date("2024-01-15T12:00:00"), 45) // Date object for 2024-01-15T12:00:45
- * addSeconds("2024-01-15T12:00:00", -30) // Date object for 2024-01-15T11:59:30
+ * addSeconds(45, new Date("2024-01-15T12:00:00")) // Date object for 2024-01-15T12:00:45
+ * addSeconds(-30, "2024-01-15T12:00:00") // Date object for 2024-01-15T11:59:30
+ * addSeconds(45) // 45 seconds from now
  * ```
  */
-export function addSeconds(date: unknown, seconds: number): Date | null {
-  const dateObj = toDate(date, null);
+export function addSeconds(seconds: number, date?: unknown): Date | null {
+  return addToDate(seconds * 1000, date);
+}
+
+/**
+ * Adds a duration to a date
+ * Accepts either a duration string (e.g., "1D", "5Y", "2h", "M", "m") or milliseconds
+ * Automatically detects and converts unknown date types
+ *
+ * @param duration - Duration string (e.g., "1D", "+5Y", "-2h") or number of milliseconds
+ * @param date - Optional date value (string, Date, number, or unknown) to add duration to. Defaults to current date/time if not provided
+ * @returns Date object with duration added, or null if duration or date is invalid
+ *
+ * @example
+ * ```ts
+ * addToDate("1D") // 1 day from now
+ * addToDate("5Y", "2024-01-15") // 5 years from 2024-01-15
+ * addToDate("-2h", new Date()) // 2 hours ago from now
+ * addToDate(86400000) // 1 day from now (milliseconds)
+ * addToDate(86400000, "2024-01-15") // 1 day from 2024-01-15
+ * addToDate("M") // 1 month from now
+ * addToDate("m") // 1 minute from now
+ * ```
+ */
+export function addToDate(
+  duration: string | number | Duration,
+  date?: unknown
+): Date | null {
+  // Parse duration
+  const parsed = parseDuration(duration);
+  if (parsed === null) return null;
+
+  // Get the base date (default to now if not provided)
+  const dateObj = date !== undefined ? toDate(date, null) : new Date();
   if (dateObj === null) return null;
 
-  const result = new Date(dateObj);
-  result.setSeconds(result.getSeconds() + seconds);
-  return result;
+  const { milliseconds, value, unit } = parsed;
+
+  // Handle relative units (calendar-based) using appropriate functions
+  // Relative units (M, Y, Q) have milliseconds set to 0 by parseDuration
+  if (unit === "M" || unit === "Y" || unit === "Q") {
+    // Pass the original date argument (not the converted Date object) to preserve timezone handling
+    const dateArg = date !== undefined ? date : dateObj;
+    if (unit === "M") {
+      return addMonths(value, dateArg);
+    } else if (unit === "Y") {
+      return addYears(value, dateArg);
+    } else if (unit === "Q") {
+      // Quarters are 3 months
+      return addMonths(value * 3, dateArg);
+    }
+  }
+
+  // For fixed units or number input, add milliseconds
+  return new Date(dateObj.getTime() + (milliseconds ?? 0));
 }
 
 /**
@@ -286,4 +391,3 @@ export function getAge(birthDate: unknown): number | null {
 
   return age;
 }
-
